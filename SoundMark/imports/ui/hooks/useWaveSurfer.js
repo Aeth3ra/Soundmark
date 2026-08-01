@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 
-export const useWavesurfer = (file) => {
+export const useWavesurfer = (url) => {
   const containerRef = useRef(null);
   const wavesurferRef = useRef(null);
 
@@ -10,7 +10,7 @@ export const useWavesurfer = (file) => {
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
-    if (!file || !containerRef.current) return;
+    if (!url || !containerRef.current) return;
 
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
@@ -19,9 +19,8 @@ export const useWavesurfer = (file) => {
     });
 
     wavesurferRef.current = wavesurfer;
-
-    const objectUrl = URL.createObjectURL(file);
-    wavesurfer.load(objectUrl);
+    console.log(url);
+    wavesurfer.load(url);
 
     wavesurfer.on("ready", () => setDuration(wavesurfer.getDuration()));
     wavesurfer.on("audioprocess", () =>
@@ -36,7 +35,7 @@ export const useWavesurfer = (file) => {
       wavesurfer.destroy();
       URL.revokeObjectURL(objectUrl);
     };
-  }, [file]);
+  }, [url]);
 
   const playPause = () => wavesurferRef.current?.playPause();
   const setVolume = (value) => wavesurferRef.current?.setVolume(value);

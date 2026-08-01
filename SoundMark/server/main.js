@@ -1,7 +1,6 @@
 import { Meteor } from "meteor/meteor";
 import { Random } from "meteor/random";
-import "imports/api/audioMethods";
-import "dotenv/config";
+import "/imports/api/audioMethods";
 
 Meteor.startup(async () => {});
 

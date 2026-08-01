@@ -1,17 +1,29 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
+import { getPlayableUrl } from "../services/audioService";
 
 export const PlayerPage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const file = state?.file;
+
+  const [audioUrl, setAudioUrl] = useState(null);
 
   useEffect(() => {
-    if (!file) navigate("/");
-  }, [file, navigate]);
+    async function loadAudio() {
+      if (!state?.key) {
+        navigate("/");
+        return;
+      }
+
+      const url = await getPlayableUrl(state.key);
+      setAudioUrl(url);
+    }
+
+    loadAudio();
+  }, [state, navigate]);
 
   const {
     containerRef,
@@ -20,7 +32,11 @@ export const PlayerPage = () => {
     duration,
     playPause,
     setVolume
-  } = useWavesurfer(file);
+  } = useWavesurfer(audioUrl);
+
+  if (!audioUrl) {
+    return <p>Loading audio...</p>;
+  }
 
   return (
     <div>

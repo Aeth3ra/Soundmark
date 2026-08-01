@@ -14,7 +14,7 @@ Meteor.methods({
   async "audio.getUploadUrl"(filename, contentType) {
     // the path for the object to be stored in
     const key = `audio/${Date.now()}-${filename}`;
-
+    console.log("Upload URL requested:", filename, contentType);
     //command to upload the file
     const command = new PutObjectCommand({
       Bucket: r2Bucket,
@@ -24,7 +24,7 @@ Meteor.methods({
 
     // get the upload URL
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
-
+    console.log(uploadUrl);
     return { uploadUrl, key };
   },
 
