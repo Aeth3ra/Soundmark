@@ -13,11 +13,15 @@
     "@aws-sdk/s3-request-presigner": "^3.1101.0",
     "@babel/runtime": "^7.23.5",
     "@swc/helpers": "^0.5.17",
+    "@tailwindcss/postcss": "^4.3.3",
     "dotenv": "^17.4.2",
     "meteor-node-stubs": "^1.2.12",
+    "postcss": "^8.5.25",
+    "postcss-load-config": "^6.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.18.2",
+    "tailwindcss": "^4.3.3",
     "wavesurfer.js": "^7.12.11"
   },
   "devDependencies": {
@@ -27,6 +31,7 @@
     "@rspack/core": "^1.7.1",
     "@rspack/plugin-react-refresh": "^1.4.3",
     "@svgr/webpack": "^8.1.0",
+    "daisyui": "^5.7.11",
     "react-refresh": "^0.17.0"
   },
   "meteor": {

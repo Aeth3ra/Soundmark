@@ -41,7 +41,6 @@ export const PlayerPage = () => {
   return (
     <div>
       <WaveformDisplay containerRef={containerRef} />
-
       <PlayerControls
         isPlaying={isPlaying}
         currentTime={currentTime}

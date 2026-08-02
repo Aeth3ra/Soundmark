@@ -1,3 +1,7 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: night --default;
+}
 body {
   padding: 10px;
   font-family: sans-serif;
