@@ -14,12 +14,12 @@ export const PlayerPage = () => {
 
   useEffect(() => {
     async function loadAudio() {
-      if (!state?.key) {
+      if (!state?.fileId) {
         navigate("/");
         return;
       }
 
-      const url = await getPlayableUrl(state.key);
+      const url = await getPlayableUrl(state.fileId);
       setAudioUrl(url);
     }
 

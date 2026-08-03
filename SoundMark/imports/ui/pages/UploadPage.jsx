@@ -2,8 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
 import { upload } from "../services/audioService";
 
-const ACCEPTED_LABEL = "MP3, WAV, M4A, FLAC · up to 200MB";
-
 export const UploadPage = () => {
   const navigate = useNavigate();
   const inputRef = useRef(null);
@@ -21,8 +19,8 @@ export const UploadPage = () => {
     setError(null);
     setUploading(true);
     try {
-      const key = await upload(file);
-      navigate("/player", { state: { key } });
+      const fileId = await upload(file);
+      navigate("/player", { state: { fileId } });
     } catch (err) {
       setError("Upload failed. Please try again.");
     } finally {

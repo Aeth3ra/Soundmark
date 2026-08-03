@@ -3,10 +3,10 @@ import { Meteor } from "meteor/meteor";
 /**
  * Function to upload audio file into cloud
  * @param {*} file file to get uploaded
- * @returns key which is file path on the cloud
+ * @returns fileId which is linked to mongo entry
  */
 export async function upload(file) {
-  const { uploadUrl, key } = await Meteor.callAsync(
+  const { uploadUrl, fileId } = await Meteor.callAsync(
     "audio.getUploadUrl",
     file.name,
     file.type
@@ -19,17 +19,20 @@ export async function upload(file) {
     },
     body: file
   });
-  console.log("R2 status:", response.status);
-  console.log("R2 response:", await response.text());
-  return key;
+
+  if (!response.ok) {
+    throw new Error("Upload to storage failed");
+  }
+
+  return fileId;
 }
 
 /**
  * Function that gets the link for the specific audio file
- * @param {*} key audo file link
+ * @param {*} fileId audo file id for mongo entry
  * @returns url for the audio from
  */
-export async function getPlayableUrl(key) {
-  const downloadUrl = await Meteor.callAsync("audio.getDownloadUrl", key);
+export async function getPlayableUrl(fileId) {
+  const downloadUrl = await Meteor.callAsync("audio.getDownloadUrl", fileId);
   return downloadUrl;
 }

@@ -1,4 +1,6 @@
 import { Meteor } from "meteor/meteor";
+import { Random } from "meteor/random";
+import { AudioCollection } from "./audioCollection";
 import {
   r2Client,
   r2Bucket,
@@ -13,7 +15,7 @@ Meteor.methods({
    */
   async "audio.getUploadUrl"(filename, contentType) {
     // the path for the object to be stored in
-    const key = `audio/${Date.now()}-${filename}`;
+    const key = `audio/${Random.id()}-${filename}`;
     console.log("Upload URL requested:", filename, contentType);
     //command to upload the file
     const command = new PutObjectCommand({
@@ -24,17 +26,27 @@ Meteor.methods({
 
     // get the upload URL
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
-    console.log(uploadUrl);
-    return { uploadUrl, key };
+
+    // Insert into Mongo
+    const fileId = await AudioCollection.insertAsync({
+      key,
+      fileName: filename,
+      contentType,
+      status: "pending",
+      createdAt: new Date()
+    });
+
+    return { uploadUrl, fileId };
   },
 
   /**
    * Method to get URL for audio to be downloaded
    */
-  async "audio.getDownloadUrl"(key) {
+  async "audio.getDownloadUrl"(fileId) {
+    const file = await AudioCollection.findOneAsync(fileId);
     const command = new GetObjectCommand({
       Bucket: r2Bucket,
-      Key: key
+      Key: file.key
     });
     return await getSignedUrl(r2Client, command, { expiresIn: 300 });
   }
