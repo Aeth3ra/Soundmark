@@ -36,3 +36,12 @@ export async function getPlayableUrl(fileId) {
   const downloadUrl = await Meteor.callAsync("audio.getDownloadUrl", fileId);
   return downloadUrl;
 }
+
+/**
+ * Function that deletes the audio file from mongo and cloudflare
+ * @param {*} fileId audo file id for mongo entry
+ * @returns nothing
+ */
+export async function deleteFile(fileId) {
+  await Meteor.callAsync("audio.deleteFile", fileId);
+}

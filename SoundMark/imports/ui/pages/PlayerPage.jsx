@@ -3,7 +3,7 @@ import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
 import { useEffect, useState } from "react";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
-import { getPlayableUrl } from "../services/audioService";
+import { getPlayableUrl, deleteFile } from "../services/audioService";
 import { ChevronLeft } from "lucide-react";
 
 export const PlayerPage = () => {
@@ -12,6 +12,7 @@ export const PlayerPage = () => {
 
   const [audioUrl, setAudioUrl] = useState(null);
 
+  // Load Audio
   useEffect(() => {
     async function loadAudio() {
       if (!state?.fileId) {
@@ -26,6 +27,16 @@ export const PlayerPage = () => {
     loadAudio();
   }, [state, navigate]);
 
+  //Clean Up Audio (Closing/Back button)
+  useEffect(() => {
+    return () => {
+      if (state?.fileId) {
+        deleteFile(state.fileId);
+      }
+    };
+  }, [state]);
+
+  // Load wavesurfer
   const {
     containerRef,
     isPlaying,

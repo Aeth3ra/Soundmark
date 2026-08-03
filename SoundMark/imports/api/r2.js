@@ -1,7 +1,8 @@
 import {
   S3Client,
   PutObjectCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  DeleteObjectCommand
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Meteor } from "meteor/meteor";
@@ -19,4 +20,9 @@ export const r2Client = new S3Client({
 });
 
 export const r2Bucket = bucketName;
-export { PutObjectCommand, GetObjectCommand, getSignedUrl };
+export {
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  getSignedUrl
+};

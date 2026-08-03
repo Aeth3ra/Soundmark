@@ -6,6 +6,7 @@ import {
   r2Bucket,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
   getSignedUrl
 } from "./r2";
 
@@ -49,5 +50,18 @@ Meteor.methods({
       Key: file.key
     });
     return await getSignedUrl(r2Client, command, { expiresIn: 300 });
+  },
+  /**
+   * Deletes the R2 object and Mongo record together. Called when a user
+   * leaves the player page without exporting/saving anything.
+   */
+  async "audio.deleteFile"(fileId) {
+    const file = await AudioCollection.findOneAsync(fileId);
+    if (!file) return; // already gone, nothing to do
+
+    await r2Client.send(
+      new DeleteObjectCommand({ Bucket: r2Bucket, Key: file.key })
+    );
+    await AudioCollection.removeAsync(fileId);
   }
 });
