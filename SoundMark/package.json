@@ -15,6 +15,7 @@
     "@swc/helpers": "^0.5.17",
     "@tailwindcss/postcss": "^4.3.3",
     "dotenv": "^17.4.2",
+    "lucide-react": "^1.28.0",
     "meteor-node-stubs": "^1.2.12",
     "postcss": "^8.5.25",
     "postcss-load-config": "^6.0.1",

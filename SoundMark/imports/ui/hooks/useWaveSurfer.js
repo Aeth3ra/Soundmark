@@ -33,7 +33,6 @@ export const useWavesurfer = (url) => {
 
     return () => {
       wavesurfer.destroy();
-      URL.revokeObjectURL(objectUrl);
     };
   }, [url]);
 
