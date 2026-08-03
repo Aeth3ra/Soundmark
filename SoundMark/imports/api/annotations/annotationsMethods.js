@@ -36,5 +36,18 @@ Meteor.methods({
       createdAt: new Date(),
       updatedAt: new Date()
     });
-  }
+  },
+
+  /**
+  * Method to delete an annotation
+  */
+  async "annotations.delete"(annotationId) {
+  check(annotationId, String);
+
+  const annotation = await AnnotationsCollection.findOneAsync(annotationId);
+
+  if (!annotation) return;
+
+  await AnnotationsCollection.removeAsync(annotationId);
+}
 });
