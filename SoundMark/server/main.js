@@ -1,7 +1,7 @@
 import { Meteor } from "meteor/meteor";
 import { Random } from "meteor/random";
-import { AudioCollection } from "../imports/api/audioCollection";
-import "/imports/api/audioMethods";
+import { AudioCollection } from "../imports/api/audio/audioCollection";
+import "/imports/api/audio/audioMethods";
 
 Meteor.startup(async () => {});
 

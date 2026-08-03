@@ -29,8 +29,8 @@ export async function upload(file) {
 
 /**
  * Function that gets the link for the specific audio file
- * @param {*} fileId audo file id for mongo entry
- * @returns url for the audio from
+ * @param {*} fileId audio file id for mongo entry
+ * @returns url for the audio from mongo entry
  */
 export async function getPlayableUrl(fileId) {
   const downloadUrl = await Meteor.callAsync("audio.getDownloadUrl", fileId);
@@ -39,7 +39,7 @@ export async function getPlayableUrl(fileId) {
 
 /**
  * Function that deletes the audio file from mongo and cloudflare
- * @param {*} fileId audo file id for mongo entry
+ * @param {*} fileId audio file id for mongo entry
  * @returns nothing
  */
 export async function deleteFile(fileId) {

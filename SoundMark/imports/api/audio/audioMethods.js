@@ -51,6 +51,7 @@ Meteor.methods({
     });
     return await getSignedUrl(r2Client, command, { expiresIn: 300 });
   },
+  
   /**
    * Deletes the R2 object and Mongo record together. Called when a user
    * leaves the player page without exporting/saving anything.
