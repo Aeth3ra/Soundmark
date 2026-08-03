@@ -32,7 +32,7 @@ Meteor.methods({
       end,
       tags: tags,
       comment: comment.trim(),
-      createdBy: this.userId,
+      createdBy: null, //Not implemented
       createdAt: new Date(),
       updatedAt: new Date()
     });
