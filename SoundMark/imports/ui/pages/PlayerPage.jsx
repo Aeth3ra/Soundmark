@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
+import { AudioExportButton } from "../components/AudioExportButton";
 import { useEffect, useState } from "react";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl, deleteFile } from "../services/audioService";
@@ -112,6 +113,9 @@ export const PlayerPage = () => {
               />
               <div className="bg-base-200/40 rounded-box p-4">
                 <WaveformDisplay containerRef={containerRef} />
+              </div>
+              <div className="flex justify-end">
+                <AudioExportButton fileId={fileId} />
               </div>
             </div>
           )}

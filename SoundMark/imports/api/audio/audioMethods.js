@@ -51,7 +51,30 @@ Meteor.methods({
     });
     return await getSignedUrl(r2Client, command, { expiresIn: 300 });
   },
-  
+
+  /**
+   * Method to get the original audio file information for export
+   */
+  async "audio.getExportInfo"(fileId) {
+    const file = await AudioCollection.findOneAsync(fileId);
+
+    if (!file) {
+      throw new Meteor.Error("not-found", "Audio file not found");
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: r2Bucket,
+      Key: file.key
+    });
+
+    const url = await getSignedUrl(r2Client, command, { expiresIn: 300 });
+
+    return {
+      url,
+      fileName: file.fileName
+    };
+  },
+
   /**
    * Deletes the R2 object and Mongo record together. Called when a user
    * leaves the player page without exporting/saving anything.
