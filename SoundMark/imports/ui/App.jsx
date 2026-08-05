@@ -6,7 +6,7 @@ export const App = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/" element={<UploadPage />} />
-      <Route path="/player" element={<PlayerPage />} />
+      <Route path="/player/:fileId" element={<PlayerPage />} />
     </Routes>
   </BrowserRouter>
 );

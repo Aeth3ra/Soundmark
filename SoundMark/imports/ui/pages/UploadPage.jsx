@@ -20,7 +20,7 @@ export const UploadPage = () => {
     setUploading(true);
     try {
       const fileId = await upload(file);
-      navigate("/player", { state: { fileId } });
+      navigate(`/player/${fileId}`);
     } catch (err) {
       setError("Upload failed. Please try again.");
     } finally {
@@ -73,6 +73,7 @@ export const UploadPage = () => {
             </>
           )}
         </div>
+        <br></br>
       </div>
       {/* Error Messages */}
       {error && <p className="text-error text-sm mt-4">{error}</p>}
