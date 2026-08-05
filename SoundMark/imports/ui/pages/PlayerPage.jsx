@@ -59,6 +59,13 @@ export const PlayerPage = () => {
   return (
     <div className="min-h-screen bg-base-300 px-6 py-10">
       <div className="max-w-3xl mx-auto">
+        {/*Logo */}
+        <div className="flex items-center gap-3 mb-6">
+          <img src="/icon-512.png" alt="SoundMark logo" className="h-7 w-7" />
+          <span className="text-xl font-bold">Soundmark</span>
+        </div>
+
+        {/* Action buttons */}
         <div className="flex items-center justify-between mb-6">
           {/* Back Button */}
           <button

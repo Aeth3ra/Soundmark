@@ -38,7 +38,11 @@ export const UploadPage = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-base-300">
       <div className="w-full max-w-md bg-base-100 rounded-box shadow-xl p-10 flex flex-col items-center">
-        <h1 className="text-3xl font-bold mb-8">Soundmark</h1>
+        {/* Title */}
+        <div className="flex items-center gap-3 mb-8">
+          <img src="/icon-512.png" alt="SoundMark logo" className="h-8 w-8" />
+          <h1 className="text-3xl font-bold">Soundmark</h1>
+        </div>
         {/* Drag/Drop Upload Zone */}
         <div
           onClick={() => !uploading && inputRef.current?.click()}
