@@ -2,7 +2,13 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
+import { AnnotationForm } from "../components/AnnotationForm";
 import { useEffect, useState } from "react";
+import { useTracker, useSubscribe } from "meteor/react-meteor-data";
+import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
+import { useAnnotationRender } from "../hooks/useAnnotationRender";
+import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
+import { useRegionsPlugin } from "../hooks/useRegions";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl, deleteFile } from "../services/audioService";
 import { ChevronLeft, Link2, Check } from "lucide-react";
@@ -14,6 +20,7 @@ export const PlayerPage = () => {
 
   const [copied, setCopied] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
+  const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
 
   // Load Audio
   useEffect(() => {
@@ -54,8 +61,24 @@ export const PlayerPage = () => {
     currentTime,
     duration,
     playPause,
-    setVolume
+    setVolume,
+    wavesurferInstance
   } = useWavesurfer(audioUrl);
+
+  // Load regions plugin for wavesurfer
+  const regionsPlugin = useRegionsPlugin(wavesurferInstance);
+
+  // Subscribes to annotation collection for the current file
+  const isAnnotationsLoading = useSubscribe("annotations.forFile", fileId);
+  const annotations = useTracker(() => {
+    return AnnotationsCollection.find(
+      { fileId },
+      { sort: { start: 1 } }
+    ).fetch();
+  }, [fileId]);
+  console.log(annotations);
+  // Renders the annotations
+  useAnnotationRender(regionsPlugin, annotations);
 
   return (
     <div className="min-h-screen bg-base-300 px-6 py-10">
@@ -117,10 +140,26 @@ export const PlayerPage = () => {
               <div className="flex justify-end">
                 <AudioExportButton fileId={fileId} />
               </div>
+
+              {/* TEMPORARY: fakes a region trigger so AnnotationForm
+                  can be tested */}
+              <button
+                onClick={() => openAnnotation({ startMs: 4200, endMs: 7800 })}
+                className="btn btn-xs btn-outline gap-2 self-start"
+              >
+                DEV: fake region trigger
+              </button>
             </div>
           )}
         </div>
       </div>
+      {/* Annotation form - only appears if triggered */}
+      <AnnotationForm
+        trigger={trigger}
+        fileId={fileId}
+        createdBy={sessionStorage.getItem("soundmark_guest_name") || "Guest"} // not implemented yet
+        onClose={closeAnnotation}
+      />
     </div>
   );
 };

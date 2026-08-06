@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Meteor } from "meteor/meteor";
 import { X, Search, ChevronDown } from "lucide-react";
 import { TAG_CATEGORIES, ALL_PREDEFINED_TAGS } from "../lib/tags";
@@ -22,6 +22,13 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
       trigger === null ? "No region selected. Drag to select one first." : null
     );
   }, [trigger]);
+
+  // Handles showing the tags results during searching
+  const searchResults = useMemo(() => {
+    const q = tagSearch.trim().toLowerCase();
+    if (!q) return null;
+    return ALL_PREDEFINED_TAGS.filter((tag) => tag.toLowerCase().includes(q));
+  }, [tagSearch]);
 
   if (trigger === undefined) return null; // not triggered at all
 
@@ -65,15 +72,13 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
     setSaving(true);
     try {
       // Calls meteor backend
-      await Meteor.callAsync(
-        "annotations.create",
+      await Meteor.callAsync("annotations.create", {
         fileId,
-        trigger.startMs / 1000,
-        trigger.endMs != null ? trigger.endMs / 1000 : null,
-        selectedTags,
-        comment,
-        createdBy
-      );
+        start: trigger.startMs / 1000,
+        end: trigger.endMs != null ? trigger.endMs / 1000 : null,
+        tags: selectedTags,
+        comment
+      });
       onClose();
     } catch (err) {
       setError("Couldn't save the annotation. Try again.");
@@ -81,14 +86,6 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
       setSaving(false);
     }
   };
-
-  // Handles showing the tags results during searching
-  const searchResults = useMemo(() => {
-    const q = tagSearch.trim().toLowerCase();
-    if (!q) return null;
-    return ALL_PREDEFINED_TAGS.filter((tag) => tag.toLowerCase().includes(q));
-  }, [tagSearch]);
-
   // Center location of the form
   const style = {
     position: "fixed",

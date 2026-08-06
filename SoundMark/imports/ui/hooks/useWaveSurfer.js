@@ -8,10 +8,12 @@ export const useWavesurfer = (url) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [wavesurferInstance, setWavesurferInstance] = useState(null);
 
   useEffect(() => {
     if (!url || !containerRef.current) return;
 
+    // wavesurfer instance
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
       waveColor: "rgb(200, 0, 200)",
@@ -19,9 +21,9 @@ export const useWavesurfer = (url) => {
     });
 
     wavesurferRef.current = wavesurfer;
-    console.log(url);
     wavesurfer.load(url);
 
+    // Information needed for player controls
     wavesurfer.on("ready", () => setDuration(wavesurfer.getDuration()));
     wavesurfer.on("audioprocess", () =>
       setCurrentTime(wavesurfer.getCurrentTime())
@@ -31,11 +33,14 @@ export const useWavesurfer = (url) => {
     wavesurfer.on("pause", () => setIsPlaying(false));
     wavesurfer.on("finish", () => setIsPlaying(false));
 
+    // set the wavesurfer instance that will be exposed
+    setWavesurferInstance(wavesurfer);
     return () => {
       wavesurfer.destroy();
     };
   }, [url]);
 
+  // functions to control wavesurfer instance
   const playPause = () => wavesurferRef.current?.playPause();
   const setVolume = (value) => wavesurferRef.current?.setVolume(value);
 
@@ -45,6 +50,7 @@ export const useWavesurfer = (url) => {
     currentTime,
     duration,
     playPause,
-    setVolume
+    setVolume,
+    wavesurferInstance
   };
 };

@@ -1,5 +1,5 @@
 import { Meteor } from "meteor/meteor";
-
+import { check } from "meteor/check";
 import { AnnotationsCollection } from "./annotationsCollection";
 import { AudioCollection } from "../audio/audioCollection";
 
