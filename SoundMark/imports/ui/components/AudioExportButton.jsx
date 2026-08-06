@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { exportAudio } from "../services/audioExportService";
+import { exportAudio } from "../services/audioService";
 
 export const AudioExportButton = ({ fileId }) => {
   const [isExporting, setIsExporting] = useState(false);
