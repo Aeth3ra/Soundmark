@@ -5,16 +5,9 @@ import { AudioCollection } from "../audio/audioCollection";
 
 Meteor.methods({
   /**
-  * Method to create an annotation for an audio file
-  */
-  async "annotations.create"({
-    fileId,
-    start,
-    end,
-    tags = [],
-    comment = ""
-  }) {
-
+   * Method to create an annotation for an audio file
+   */
+  async "annotations.create"({ fileId, start, end, tags = [], comment = "" }) {
     const audioFile = await AudioCollection.findOneAsync(fileId);
 
     // Check file exists
@@ -39,15 +32,15 @@ Meteor.methods({
   },
 
   /**
-  * Method to delete an annotation
-  */
+   * Method to delete an annotation
+   */
   async "annotations.delete"(annotationId) {
-  check(annotationId, String);
+    check(annotationId, String);
 
-  const annotation = await AnnotationsCollection.findOneAsync(annotationId);
+    const annotation = await AnnotationsCollection.findOneAsync(annotationId);
 
-  if (!annotation) return;
+    if (!annotation) return;
 
-  await AnnotationsCollection.removeAsync(annotationId);
-}
+    await AnnotationsCollection.removeAsync(annotationId);
+  }
 });
