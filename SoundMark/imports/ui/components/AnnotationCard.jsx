@@ -21,7 +21,7 @@ export const AnnotationCard = ({ annotation, onSeek }) => {
     <button
       type="button"
       onClick={() => onSeek(annotation.start)}
-      className="w-full text-left px-5 py-4 hover:bg-base-200/60 transition-colors group"
+      className="w-full text-left px-4 py-3 rounded-box border border-base-300/60 bg-base-100 shadow-sm hover:shadow-md hover:border-base-content/20 transition-all group"
     >
       <div className="flex items-center justify-between mb-1.5">
         {/* The Time-Region */}

@@ -12,7 +12,7 @@ const formatMs = (ms) => {
 export const AnnotationList = ({ annotations, isOpen, onClose, onSeek }) => {
   return (
     <aside
-      className={`shrink-0 overflow-hidden border-l border-base-300 bg-base-100 transition-all duration-300 ${
+      className={`shrink-0 overflow-hidden border-l border-base-300 bg-base-200 transition-all duration-300 ${
         isOpen ? "w-80" : "w-0"
       }`}
     >
@@ -45,7 +45,7 @@ export const AnnotationList = ({ annotations, isOpen, onClose, onSeek }) => {
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-base-300">
+            <ul className="flex flex-col gap-2 p-3">
               {annotations.map((annotation) => (
                 <li key={annotation._id}>
                   <AnnotationCard annotation={annotation} onSeek={onSeek} />
