@@ -1,6 +1,6 @@
 import { Meteor } from "meteor/meteor";
 import { Trash2 } from "lucide-react";
-
+import { deleteAnnotation } from "../services/annotationService";
 // Formats milliseconds as m:ss
 const formatMs = (ms) => {
   const totalSeconds = Math.floor(ms / 1000);
