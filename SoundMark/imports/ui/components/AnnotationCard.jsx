@@ -11,9 +11,9 @@ const formatMs = (ms) => {
 
 export const AnnotationCard = ({ annotation, onSeek }) => {
   // Deletes this annotation via the backend
-  const handleDelete = async (e, annotationId) => {
+  const handleDelete = async (e) => {
     e.stopPropagation();
-    await deleteAnnotation(annotationId);
+    await deleteAnnotation(annotation);
   };
 
   return (

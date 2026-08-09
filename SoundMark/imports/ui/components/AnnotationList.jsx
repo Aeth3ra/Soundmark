@@ -1,6 +1,5 @@
 import { Meteor } from "meteor/meteor";
 import { X, Trash2, Tag as TagIcon } from "lucide-react";
-import { deleteAnnotation } from "../services/annotationService";
 import { AnnotationCard } from "./AnnotationCard";
 
 const formatMs = (ms) => {

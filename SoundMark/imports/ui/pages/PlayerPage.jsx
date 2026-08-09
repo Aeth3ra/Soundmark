@@ -159,7 +159,7 @@ export const PlayerPage = () => {
 
               {/* Waveform  */}
               <div className="flex-1 px-6 py-6">
-                <div className="bg-base-100 rounded-box shadow-xl h-full p-6 flex flex-col">
+                <div className="bg-base-100 rounded-box shadow-xl p-6 flex flex-col">
                   <div className="bg-base-200/40 rounded-box flex-1 p-4">
                     <WaveformDisplay containerRef={containerRef} />
                   </div>
