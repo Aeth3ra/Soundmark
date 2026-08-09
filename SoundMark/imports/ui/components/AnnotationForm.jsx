@@ -97,151 +97,179 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
   return (
     <div
       style={style}
-      className="bg-base-100 rounded-box shadow-xl p-4 w-80 flex flex-col gap-3 border border-base-300"
+      className="bg-base-100 rounded-2xl shadow-2xl p-6 w-[26rem] max-w-[calc(100vw-2rem)] flex flex-col gap-5 border border-base-300"
     >
       {/* Header of the form */}
-      <div className="flex items-center justify-between">
-        {trigger ? (
-          <p className="text-sm font-mono text-base-content/70">
-            {trigger.endMs != null
-              ? `${trigger.startMs} ms - ${trigger.endMs} ms`
-              : `at ${trigger.startMs} ms`}
+      <div className="flex items-center justify-between pb-4 border-b border-base-300">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-base-content/40 mb-1">
+            New annotation
           </p>
-        ) : (
-          <p className="text-sm text-base-content/50">No region selected</p>
-        )}
+          {trigger ? (
+            <p className="text-base font-mono font-medium text-base-content/80">
+              {trigger.endMs != null
+                ? `${trigger.startMs} ms — ${trigger.endMs} ms`
+                : `at ${trigger.startMs} ms`}
+            </p>
+          ) : (
+            <p className="text-base text-base-content/50">No region selected</p>
+          )}
+        </div>
 
         {/* Close button */}
         <button
           type="button"
           onClick={onClose}
-          className="btn btn-ghost btn-xs btn-circle"
+          className="btn btn-ghost btn-sm btn-circle"
         >
-          <X className="h-3 w-3" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
       {/* Tags - only appear if triggered*/}
       {trigger && (
         <>
-          {/* Tag search */}
-          <div className="relative">
-            <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/40" />
-            <input
-              type="text"
-              value={tagSearch}
-              onChange={(e) => setTagSearch(e.target.value)}
-              placeholder="Search tags..."
-              className="input input-sm input-bordered w-full pl-8"
-            />
-          </div>
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-base-content/40">
+              Tags
+            </p>
 
-          {/* Tag picker: search results OR grouped categories */}
-          <div className="max-h-48 overflow-y-auto flex flex-col gap-2">
-            {searchResults ? (
-              <div className="flex flex-wrap gap-2">
-                {searchResults.length === 0 ? (
-                  <p className="text-xs text-base-content/40">
-                    No matching tags
-                  </p>
-                ) : (
-                  searchResults.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`btn btn-xs ${selectedTags.includes(tag) ? "btn-primary" : "btn-outline"}`}
-                    >
-                      {tag}
-                    </button>
-                  ))
-                )}
-              </div>
-            ) : (
-              Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
-                <div key={category}>
-                  <button
-                    type="button"
-                    onClick={() => toggleCategory(category)}
-                    className="flex items-center gap-1 text-xs font-medium text-base-content/60 w-full py-1"
-                  >
-                    <ChevronDown
-                      className={`h-3 w-3 transition-transform ${
-                        openCategories.has(category) ? "" : "-rotate-90"
-                      }`}
-                    />
-                    {category}
-                  </button>
-                  {openCategories.has(category) && (
-                    <div className="flex flex-wrap gap-2 pl-4 pb-1">
-                      {tags.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => toggleTag(tag)}
-                          className={`btn btn-xs ${selectedTags.includes(tag) ? "btn-primary" : "btn-outline"}`}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
+            {/* Tag search */}
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+              <input
+                type="text"
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+                placeholder="Search tags..."
+                className="input input-bordered w-full pl-9"
+              />
+            </div>
+
+            {/* Tag picker: search results OR grouped categories */}
+            <div className="max-h-56 overflow-y-auto flex flex-col gap-3 pr-1">
+              {searchResults ? (
+                <div className="flex flex-wrap gap-2">
+                  {searchResults.length === 0 ? (
+                    <p className="text-sm text-base-content/40 py-2">
+                      No matching tags
+                    </p>
+                  ) : (
+                    searchResults.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={`btn btn-sm rounded-full ${selectedTags.includes(tag) ? "btn-primary" : "btn-outline"}`}
+                      >
+                        {tag}
+                      </button>
+                    ))
                   )}
                 </div>
-              ))
+              ) : (
+                Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
+                  <div key={category}>
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(category)}
+                      className="flex items-center gap-1.5 text-sm font-medium text-base-content/60 hover:text-base-content/90 w-full py-1.5"
+                    >
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${
+                          openCategories.has(category) ? "" : "-rotate-90"
+                        }`}
+                      />
+                      {category}
+                    </button>
+                    {openCategories.has(category) && (
+                      <div className="flex flex-wrap gap-2 pl-5 pb-2 pt-1">
+                        {tags.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={`btn btn-sm rounded-full ${selectedTags.includes(tag) ? "btn-primary" : "btn-outline"}`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Custom tag input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && (e.preventDefault(), addCustomTag())
+                }
+                placeholder="Add a custom tag"
+                className="input input-bordered flex-1"
+              />
+              <button type="button" onClick={addCustomTag} className="btn">
+                Add
+              </button>
+            </div>
+
+            {/* Selected tags (predefined + custom, shown together) */}
+            {selectedTags.length > 0 && (
+              <div className="flex flex-wrap gap-2 border-t border-base-300 pt-3">
+                {selectedTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="badge badge-primary badge-lg gap-1.5 py-3"
+                  >
+                    {tag}
+                    <button type="button" onClick={() => removeTag(tag)}>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Custom tag input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={customTag}
-              onChange={(e) => setCustomTag(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === "Enter" && (e.preventDefault(), addCustomTag())
-              }
-              placeholder="Add a custom tag"
-              className="input input-sm input-bordered flex-1"
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-base-content/40">
+              Comment
+            </p>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a comment (optional)"
+              className="textarea textarea-bordered w-full"
+              rows={3}
             />
-            <button type="button" onClick={addCustomTag} className="btn btn-sm">
-              Add
-            </button>
           </div>
-
-          {/* Selected tags (predefined + custom, shown together) */}
-          {selectedTags.length > 0 && (
-            <div className="flex flex-wrap gap-2 border-t border-base-300 pt-2">
-              {selectedTags.map((tag) => (
-                <span key={tag} className="badge badge-primary gap-1">
-                  {tag}
-                  <button type="button" onClick={() => removeTag(tag)}>
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Add a comment (optional)"
-            className="textarea textarea-bordered textarea-sm w-full"
-            rows={2}
-          />
         </>
       )}
 
-      {error && <p className="text-error text-sm">{error}</p>}
+      {error && (
+        <p className="text-error text-sm bg-error/10 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={saving}
-        className="btn btn-primary btn-sm self-start"
-      >
-        {saving ? "Saving..." : "Save annotation"}
-      </button>
+      <div className="flex justify-between items-center pt-1">
+        <button type="button" onClick={onClose} className="btn btn-ghost">
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving}
+          className="btn btn-primary px-6"
+        >
+          {saving ? "Saving..." : "Save annotation"}
+        </button>
+      </div>
     </div>
   );
 };
