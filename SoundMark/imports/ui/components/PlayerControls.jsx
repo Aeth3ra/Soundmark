@@ -1,4 +1,4 @@
-import { Play, Pause, Volume2 } from "lucide-react";
+import { Play, Pause, Repeat, Volume2 } from "lucide-react";
 
 const formatTime = (sec) => {
   if (!isFinite(sec)) return "0:00";
@@ -11,9 +11,11 @@ const formatTime = (sec) => {
 
 export const PlayerControls = ({
   isPlaying,
+  isLooping,
   currentTime,
   duration,
   onPlayPause,
+  onToggleLoop,
   onVolumeChange
 }) => {
   return (
@@ -29,6 +31,17 @@ export const PlayerControls = ({
         ) : (
           <Play className="h-5 w-5 ml-0.5" fill="currentColor" />
         )}
+      </button>
+
+      {/* Loop */}
+      <button
+        onClick={onToggleLoop}
+        className={`btn btn-sm btn-square ${isLooping ? "btn-primary" : "btn-ghost"}`}
+        aria-label={isLooping ? "Disable loop playback" : "Enable loop playback"}
+        aria-pressed={isLooping}
+        title={isLooping ? "Disable loop playback" : "Enable loop playback"}
+      >
+        <Repeat className="h-4 w-4" />
       </button>
 
       {/* Time */}
