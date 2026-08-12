@@ -53,10 +53,12 @@ export const PlayerPage = () => {
     containerRef,
     isPlaying,
     isLooping,
+    playbackRate,
     currentTime,
     duration,
     playPause,
     setVolume,
+    setPlaybackRate,
     toggleLoop,
     wavesurferInstance
   } = useWavesurfer(audioUrl);
@@ -138,10 +140,12 @@ export const PlayerPage = () => {
                 <PlayerControls
                   isPlaying={isPlaying}
                   isLooping={isLooping}
+                  playbackRate={playbackRate}
                   currentTime={currentTime}
                   duration={duration}
                   onPlayPause={playPause}
                   onToggleLoop={toggleLoop}
+                  onPlaybackRateChange={setPlaybackRate}
                   onVolumeChange={setVolume}
                 />
 

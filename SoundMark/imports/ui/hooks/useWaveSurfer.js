@@ -7,6 +7,7 @@ export const useWavesurfer = (url) => {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
+  const [playbackRate, setPlaybackRateState] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [wavesurferInstance, setWavesurferInstance] = useState(null);
@@ -24,6 +25,7 @@ export const useWavesurfer = (url) => {
     wavesurferRef.current = wavesurfer;
     wavesurfer.getMediaElement().loop = false;
     setIsLooping(false);
+    setPlaybackRateState(1);
     wavesurfer.load(url);
 
     // Information needed for player controls
@@ -46,6 +48,12 @@ export const useWavesurfer = (url) => {
   // functions to control wavesurfer instance
   const playPause = () => wavesurferRef.current?.playPause();
   const setVolume = (value) => wavesurferRef.current?.setVolume(value);
+  const setPlaybackRate = (rate) => {
+    if (!wavesurferRef.current) return;
+
+    wavesurferRef.current.setPlaybackRate(rate, true);
+    setPlaybackRateState(rate);
+  };
   const toggleLoop = () => {
     const media = wavesurferRef.current?.getMediaElement();
     if (!media) return;
@@ -58,10 +66,12 @@ export const useWavesurfer = (url) => {
     containerRef,
     isPlaying,
     isLooping,
+    playbackRate,
     currentTime,
     duration,
     playPause,
     setVolume,
+    setPlaybackRate,
     toggleLoop,
     wavesurferInstance
   };

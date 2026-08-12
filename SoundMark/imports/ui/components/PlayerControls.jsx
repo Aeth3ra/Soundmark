@@ -12,10 +12,12 @@ const formatTime = (sec) => {
 export const PlayerControls = ({
   isPlaying,
   isLooping,
+  playbackRate,
   currentTime,
   duration,
   onPlayPause,
   onToggleLoop,
+  onPlaybackRateChange,
   onVolumeChange
 }) => {
   return (
@@ -48,6 +50,24 @@ export const PlayerControls = ({
       <span className="font-mono text-sm text-base-content/70 tabular-nums">
         {formatTime(currentTime)} / {formatTime(duration)}
       </span>
+
+      {/* Playback speed */}
+      <label className="flex items-center gap-2 text-sm text-base-content/70">
+        Speed
+        <select
+          value={playbackRate}
+          onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
+          className="select select-bordered select-sm"
+          aria-label="Playback speed"
+        >
+          <option value="0.5">0.5×</option>
+          <option value="0.75">0.75×</option>
+          <option value="1">1×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
+      </label>
 
       {/* Volume */}
       <div className="flex items-center gap-2 ml-auto w-36">
