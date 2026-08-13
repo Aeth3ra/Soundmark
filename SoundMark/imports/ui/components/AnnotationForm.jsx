@@ -110,7 +110,7 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
             <p className="text-base font-mono font-medium text-base-content/80">
               {trigger.endMs != null
                 ? `${formatMs(trigger.startMs)} — ${formatMs(trigger.endMs)} `
-                : `at ${trigger.startMs} ms`}
+                : `at ${formatMs(trigger.startMs)} `}
             </p>
           ) : (
             <p className="text-base text-base-content/50">No region selected</p>

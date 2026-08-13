@@ -2,13 +2,6 @@ import { Meteor } from "meteor/meteor";
 import { X, Trash2, Tag as TagIcon } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
 
-const formatMs = (ms) => {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
-
 export const AnnotationList = ({ annotations, isOpen, onClose, onSeek }) => {
   return (
     <aside
