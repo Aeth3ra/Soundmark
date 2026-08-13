@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Meteor } from "meteor/meteor";
 import { X, Search, ChevronDown } from "lucide-react";
 import { TAG_CATEGORIES, ALL_PREDEFINED_TAGS } from "../lib/tags";
+import { formatMs } from "../utils/time";
 
 export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
   const [selectedTags, setSelectedTags] = useState([]);
@@ -108,7 +109,7 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
           {trigger ? (
             <p className="text-base font-mono font-medium text-base-content/80">
               {trigger.endMs != null
-                ? `${trigger.startMs} ms — ${trigger.endMs} ms`
+                ? `${formatMs(trigger.startMs)} — ${formatMs(trigger.endMs)} `
                 : `at ${trigger.startMs} ms`}
             </p>
           ) : (
