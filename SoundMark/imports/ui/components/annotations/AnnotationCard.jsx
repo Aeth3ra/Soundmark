@@ -1,7 +1,7 @@
 import { Meteor } from "meteor/meteor";
 import { Trash2 } from "lucide-react";
-import { deleteAnnotation } from "../services/annotationService";
-import { formatMs } from "../utils/time";
+import { deleteAnnotation } from "../../services/annotationService";
+import { formatMs } from "../../utils/time";
 
 export const AnnotationCard = ({ annotation, onSeek }) => {
   // Deletes this annotation via the backend

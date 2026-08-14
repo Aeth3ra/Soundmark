@@ -1,13 +1,5 @@
 import { Play, Pause, Repeat, Volume2 } from "lucide-react";
-
-const formatTime = (sec) => {
-  if (!isFinite(sec)) return "0:00";
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${m}:${s}`;
-};
+import { formatTime } from "../utils/time";
 
 export const PlayerControls = ({
   isPlaying,
@@ -39,7 +31,9 @@ export const PlayerControls = ({
       <button
         onClick={onToggleLoop}
         className={`btn btn-sm btn-square ${isLooping ? "btn-primary" : "btn-ghost"}`}
-        aria-label={isLooping ? "Disable loop playback" : "Enable loop playback"}
+        aria-label={
+          isLooping ? "Disable loop playback" : "Enable loop playback"
+        }
         aria-pressed={isLooping}
         title={isLooping ? "Disable loop playback" : "Enable loop playback"}
       >

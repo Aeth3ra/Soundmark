@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
  * Renders the annotations provided using the regions plugin
@@ -8,6 +8,21 @@ import { useEffect, useRef } from "react";
 export const useAnnotationRender = (regionsPlugin, annotations) => {
   // A map to track which annotation data is link to which annotation region
   const drawnRef = useRef(new Map());
+  const [markerSlots, setMarkerSlots] = useState([]);
+
+  const refreshMarkerSlots = useCallback(() => {
+    const slots = [];
+    drawnRef.current.forEach((waveRegion, id) => {
+      console.log("slot element for", id, ":", waveRegion.element);
+      slots.push({
+        id,
+        slotElement: waveRegion.element, // the empty box wavesurfer created
+        annotation: waveRegion.__annotation,
+        isTimestamp: waveRegion.__isTimestamp
+      });
+    });
+    setMarkerSlots(slots);
+  }, []);
 
   useEffect(() => {
     if (!regionsPlugin) return;
@@ -27,50 +42,55 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
 
     // Render annotations that hasn't been rendered yet
     annotations.forEach((annotation) => {
-      const label = annotation.tags?.length
-        ? annotation.tags.join(", ")
-        : annotation.comment || "";
       const isTimestamp = annotation.end == null;
       const existing = drawn.get(annotation._id);
 
       if (existing) {
-        // If existing, and have different time ranges, update the region's time range
+        // Update time range if it changed
         const currentEnd = isTimestamp ? annotation.start : annotation.end;
         if (
           existing.start !== annotation.start ||
           existing.end !== currentEnd
         ) {
-          existing.setOptions({
-            start: annotation.start,
-            end: currentEnd,
-            content: label
-          });
+          existing.setOptions({ start: annotation.start, end: currentEnd });
         }
+        // Keep tags/comment fresh even if geometry didn't change
+        existing.__annotation = annotation;
         return;
       }
 
-      // Add new annotation region
+      // Create an empty box on the waveform - no content yet.
+      // React fills it in via AnnotationMarkersLayer below.
       const waveRegion = regionsPlugin.addRegion(
         isTimestamp
           ? {
-              // Timestamp annotations: no `end` key at all -> wavesurfer draws
               start: annotation.start,
-              content: label,
-              color: "rgba(255, 107, 74, 0.9)", // coral
+              color: "#ff6b4a",
               drag: false,
               resize: false
             }
           : {
               start: annotation.start,
               end: annotation.end,
-              content: label,
               color: "rgba(74, 58, 255, 0.2)",
               drag: false,
               resize: false
             }
       );
       // Save it into the map
+      waveRegion.__annotation = annotation;
+      waveRegion.__isTimestamp = isTimestamp;
       drawn.set(annotation._id, waveRegion);
     });
-  }, [regionsPlugin, annotations]);
+    refreshMarkerSlots();
+  }, [regionsPlugin, annotations, refreshMarkerSlots]);
+
+  useEffect(() => {
+    return () => {
+      drawnRef.current.forEach((waveRegion) => waveRegion.remove());
+      drawnRef.current.clear();
+    };
+  }, []);
+
+  return markerSlots;
 };

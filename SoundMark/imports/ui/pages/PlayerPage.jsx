@@ -2,8 +2,8 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
-import { AnnotationForm } from "../components/AnnotationForm";
-import { useEffect, useState } from "react";
+import { AnnotationForm } from "../components/annotations/AnnotationForm";
+import { useEffect, useState, useRef } from "react";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
 import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
 import { useAnnotationRender } from "../hooks/useAnnotationRender";
@@ -12,7 +12,9 @@ import { useRegionsPlugin } from "../hooks/useRegions";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl, deleteFile } from "../services/audioService";
 import { ChevronLeft, Link2, Check, ListMusic } from "lucide-react";
-import { AnnotationList } from "../components/AnnotationList";
+import { AnnotationList } from "../components/annotations/AnnotationList";
+import { AnnotationTooltip } from "../components/annotations/AnnotationToolTip";
+import { AnnotationMarkersLayer } from "../components/annotations/AnnotationMarkersLayer";
 
 export const PlayerPage = () => {
   const { fileId } = useParams();
@@ -74,9 +76,10 @@ export const PlayerPage = () => {
       { sort: { start: 1 } }
     ).fetch();
   }, [fileId]);
-  console.log(annotations);
+
   // Renders the annotations
-  useAnnotationRender(regionsPlugin, annotations);
+  const tooltipRef = useRef(null);
+  const markerSlots = useAnnotationRender(regionsPlugin, annotations);
 
   // Copies the current link into the clipboard
   const handleShare = async () => {
@@ -177,7 +180,7 @@ export const PlayerPage = () => {
               {/* TEMPORARY: fakes a region trigger so AnnotationForm
                   can be tested */}
               <button
-                onClick={() => openAnnotation({ startMs: 4200, endMs: 7800 })}
+                onClick={() => openAnnotation({ startMs: 4200, endMs: 7200 })}
                 className="btn btn-xs btn-outline gap-2 self-start ml-6 mb-4"
               >
                 DEV: fake region trigger
@@ -202,6 +205,15 @@ export const PlayerPage = () => {
         createdBy={sessionStorage.getItem("soundmark_guest_name") || "Guest"} // not implemented yet
         onClose={closeAnnotation}
       />
+
+      {/* Annotation Marker on top of the annotation regions/timestamps */}
+      <AnnotationMarkersLayer
+        markerSlots={markerSlots}
+        tooltipRef={tooltipRef}
+      />
+
+      {/* Annotation tool tip upon hover */}
+      <AnnotationTooltip ref={tooltipRef} />
     </div>
   );
 };

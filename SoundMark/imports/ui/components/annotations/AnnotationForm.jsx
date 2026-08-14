@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Meteor } from "meteor/meteor";
 import { X, Search, ChevronDown } from "lucide-react";
-import { TAG_CATEGORIES, ALL_PREDEFINED_TAGS } from "../lib/tags";
-import { formatMs } from "../utils/time";
+import { TAG_CATEGORIES, ALL_PREDEFINED_TAGS } from "../../lib/tags";
+import { formatMs } from "../../utils/time";
 
 export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
   const [selectedTags, setSelectedTags] = useState([]);
