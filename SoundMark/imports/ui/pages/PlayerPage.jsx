@@ -185,6 +185,12 @@ export const PlayerPage = () => {
               >
                 DEV: fake region trigger
               </button>
+              <button
+                onClick={() => openAnnotation({ startMs: 1000 })}
+                className="btn btn-xs btn-outline gap-2 self-start ml-6 mb-4"
+              >
+                DEV: fake region trigger
+              </button>
             </>
           )}
         </div>

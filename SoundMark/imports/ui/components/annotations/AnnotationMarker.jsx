@@ -13,22 +13,37 @@ export const AnnotationMarker = ({ annotation, isTimestamp, tooltipRef }) => {
   const [isCompact, setIsCompact] = useState(false);
 
   useEffect(() => {
-    // Runs once/whether it is timestamp or not
-    if (isTimestamp || !wrapperRef.current) return;
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    // 1. Native Event Listeners for Hover
+    const handleMouseEnter = () => {
+      tooltipRef.current?.show(el, annotation, isTimestamp);
+    };
+
+    const handleMouseLeave = () => {
+      tooltipRef.current?.hide();
+    };
+
+    el.addEventListener("mouseenter", handleMouseEnter);
+    el.addEventListener("mouseleave", handleMouseLeave);
+
+    // 2. Resize Observer (Your existing logic)
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        //Everytime element size change
-        setIsCompact(entry.contentRect.width < COMPACT_WIDTH_THRESHOLD); //If element is too small, set compact to true else false
+        setIsCompact(entry.contentRect.width < COMPACT_WIDTH_THRESHOLD);
       }
     });
-    observer.observe(wrapperRef.current); //subscribe to observer
-    return () => observer.disconnect(); // Clean up function
-  }, [isTimestamp]);
 
-  const handleMouseEnter = () =>
-    //Function that shows tooltip if entering region
-    tooltipRef.current?.show(wrapperRef.current, annotation, isTimestamp);
-  const handleMouseLeave = () => tooltipRef.current?.hide(); // Hides tooltip upon leaving
+    if (!isTimestamp) observer.observe(el);
+
+    // Clean up
+    return () => {
+      el.removeEventListener("mouseenter", handleMouseEnter);
+      el.removeEventListener("mouseleave", handleMouseLeave);
+      observer.disconnect();
+    };
+  }, [annotation, isTimestamp, tooltipRef]);
 
   if (isTimestamp) {
     //Render this if the annotation is a timestamp
@@ -36,8 +51,6 @@ export const AnnotationMarker = ({ annotation, isTimestamp, tooltipRef }) => {
       <div
         ref={wrapperRef}
         className="annotation-marker relative z-20 flex flex-col items-center -translate-x-1/2 cursor-pointer pointer-events-auto"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         {/* Circle */}
         <div
@@ -61,7 +74,7 @@ export const AnnotationMarker = ({ annotation, isTimestamp, tooltipRef }) => {
     // Render this if it is a region
     <div
       ref={wrapperRef}
-      className="annotation-region absolute inset-0 z-20 flex items-center gap-1 overflow-hidden cursor-pointer pointer-events-auto"
+      className="annotation-region absolute inset-0 z-20 flex items-center gap-1 overflow-visible cursor-pointer pointer-events-auto"
       style={{
         width: "100%",
         height: "100%",
@@ -69,8 +82,6 @@ export const AnnotationMarker = ({ annotation, isTimestamp, tooltipRef }) => {
         justifyContent: isCompact ? "center" : "flex-start",
         boxSizing: "border-box"
       }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       <span
         className="h-2 w-2 rounded-full shrink-0"

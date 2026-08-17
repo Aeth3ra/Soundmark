@@ -1,4 +1,10 @@
-import { forwardRef, useImperativeHandle, useState, useRef } from "react";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  useRef,
+  useLayoutEffect
+} from "react";
 import { createPortal } from "react-dom";
 import { formatTime } from "../../utils/time";
 
@@ -12,30 +18,16 @@ export const AnnotationTooltip = forwardRef((props, ref) => {
 
   useImperativeHandle(ref, () => ({
     show(targetEl, annotation, isTimestamp) {
-      // For Annotation Marker to show tooltip
-      const rect = targetEl.getBoundingClientRect();
+      // Store the target rectangle, but don't calculate tooltip pos yet
+      const targetRect = targetEl.getBoundingClientRect();
 
       setState({
         annotation,
         isTimestamp,
-        top: rect.top,
-        left: rect.left,
-        ready: false
-      });
-
-      requestAnimationFrame(() => {
-        if (!elRef.current) return; // tooltip may have been hidden already
-        const tooltipRect = elRef.current.getBoundingClientRect();
-
-        let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
-        left = Math.max(
-          8,
-          Math.min(left, window.innerWidth - tooltipRect.width - 8)
-        );
-
-        const top = Math.max(8, rect.top - tooltipRect.height - 10);
-
-        setState({ annotation, isTimestamp, top, left, ready: true });
+        targetRect,
+        ready: false,
+        top: 0,
+        left: 0
       });
     },
     hide() {
@@ -43,6 +35,24 @@ export const AnnotationTooltip = forwardRef((props, ref) => {
       setState(null);
     }
   }));
+
+  useLayoutEffect(() => {
+    if (state && !state.ready && elRef.current) {
+      const tooltipRect = elRef.current.getBoundingClientRect();
+      const { targetRect } = state;
+
+      let left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+      left = Math.max(
+        8,
+        Math.min(left, window.innerWidth - tooltipRect.width - 8)
+      );
+
+      const top = Math.max(8, targetRect.top - tooltipRect.height - 10);
+
+      // Trigger final placement and fade in
+      setState((prev) => ({ ...prev, top, left, ready: true }));
+    }
+  }, [state]);
 
   if (!state) return null; //Skip if not hovered on
 
@@ -56,12 +66,16 @@ export const AnnotationTooltip = forwardRef((props, ref) => {
     <div
       ref={elRef}
       className="fixed z-[9999] max-w-[240px] rounded-lg bg-neutral text-neutral-content text-xs shadow-xl px-3 py-2 pointer-events-none transition-opacity duration-150 ease-out"
-      style={{ top, left, opacity: ready ? 1 : 0 }}
+      style={{
+        top: `${top}px`,
+        left: `${left}px`,
+        opacity: ready ? 1 : 0,
+        // Prevent layout shift on initial render
+        visibility: ready ? "visible" : "hidden"
+      }}
     >
-      {/* Time (always shown) */}
       <div className="font-semibold text-neutral-content/90">{timeLabel}</div>
 
-      {/* Tags (only shown if any exist) */}
       {annotation.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
           {annotation.tags.map((tag) => (
@@ -75,7 +89,6 @@ export const AnnotationTooltip = forwardRef((props, ref) => {
         </div>
       )}
 
-      {/* Comment (only shown if one was written) */}
       {annotation.comment && (
         <p className="mt-1 text-neutral-content/80 leading-snug">
           {annotation.comment}
