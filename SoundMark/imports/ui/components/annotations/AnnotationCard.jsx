@@ -10,11 +10,22 @@ export const AnnotationCard = ({ annotation, onSeek }) => {
     await deleteAnnotation(annotation);
   };
 
+  // Seeks to the annotation on click, or Enter/Space for keyboard users
+  const handleSeek = () => onSeek(annotation.start);
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault(); // stop page scroll on Space
+      handleSeek();
+    }
+  };
+
   return (
     //Make the Card seek to the annotation
-    <button
-      type="button"
-      onClick={() => onSeek(annotation.start)}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleSeek}
+      onKeyDown={handleKeyDown}
       className="w-full text-left px-4 py-3 rounded-box border border-base-300/60 bg-base-100 shadow-sm hover:shadow-md hover:border-base-content/20 transition-all group"
     >
       <div className="flex items-center justify-between mb-1.5">
@@ -48,6 +59,6 @@ export const AnnotationCard = ({ annotation, onSeek }) => {
           {annotation.comment}
         </p>
       )}
-    </button>
+    </div>
   );
 };

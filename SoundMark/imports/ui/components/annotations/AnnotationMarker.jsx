@@ -3,6 +3,8 @@ import { useRef, useState, useEffect } from "react";
 const TIMESTAMP_COLOR = "#ff6b4a";
 const REGION_BORDER = "rgba(74, 58, 255, 0.75)";
 const COMPACT_WIDTH_THRESHOLD = 46;
+const STEM_HEIGHT = "16px";
+const STEM_COLOR = "transparent";
 
 /**
  * Make an annotation marker for an annotation region.
@@ -62,6 +64,18 @@ export const AnnotationMarker = ({ annotation, isTimestamp, tooltipRef }) => {
             borderRadius: "50%",
             backgroundColor: TIMESTAMP_COLOR,
             boxShadow: "0 1px 4px rgba(0,0,0,0.4)"
+          }}
+        />
+
+        {/* Stem (transparent, present for layout/hit-area) */}
+        <div
+          style={{
+            position: "absolute",
+            top: "12px",
+            bottom: 0,
+            width: "1px",
+            transform: "translateX(-100%)",
+            backgroundColor: STEM_COLOR
           }}
         />
       </div>

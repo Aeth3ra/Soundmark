@@ -48,8 +48,7 @@ export const PlayerPage = () => {
         deleteFile(fileId);
       }
     };
-  }, [location.state]);
-
+  }, [fileId]);
   // Load wavesurfer
   const {
     containerRef,
@@ -180,7 +179,7 @@ export const PlayerPage = () => {
               {/* TEMPORARY: fakes a region trigger so AnnotationForm
                   can be tested */}
               <button
-                onClick={() => openAnnotation({ startMs: 4200, endMs: 7200 })}
+                onClick={() => openAnnotation({ startMs: 4200, endMs: 20000 })}
                 className="btn btn-xs btn-outline gap-2 self-start ml-6 mb-4"
               >
                 DEV: fake region trigger

@@ -29,7 +29,10 @@ export const useWavesurfer = (url) => {
     wavesurfer.load(url);
 
     // Information needed for player controls
-    wavesurfer.on("ready", () => setDuration(wavesurfer.getDuration()));
+    wavesurfer.on("ready", () => {
+      setDuration(wavesurfer.getDuration());
+      setWavesurferInstance(wavesurfer);
+    });
     wavesurfer.on("audioprocess", () =>
       setCurrentTime(wavesurfer.getCurrentTime())
     );
@@ -39,9 +42,9 @@ export const useWavesurfer = (url) => {
     wavesurfer.on("finish", () => setIsPlaying(false));
 
     // set the wavesurfer instance that will be exposed
-    setWavesurferInstance(wavesurfer);
     return () => {
       wavesurfer.destroy();
+      setWavesurferInstance(null);
     };
   }, [url]);
 
