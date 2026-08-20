@@ -73,8 +73,8 @@ export const AnnotationMarker = ({ annotation, isTimestamp, tooltipRef }) => {
             position: "absolute",
             top: "12px",
             bottom: 0,
-            width: "1px",
-            transform: "translateX(-100%)",
+            width: "15px",
+            transform: "translateX(-50%)",
             backgroundColor: STEM_COLOR
           }}
         />
