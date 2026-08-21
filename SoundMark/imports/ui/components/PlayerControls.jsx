@@ -70,11 +70,11 @@ export const PlayerControls = ({
         <ZoomIn className="h-4 w-4 text-base-content/50 shrink-0" />
         <input
           type="range"
-          min="10"
+          min="0"
           max="1000"
           step="10"
           value={zoom}
-          onChange={(e) => onZoomChange(parseFloat(e.target.value))}
+          onInput={(e) => onZoomChange(parseFloat(e.target.value))}
           className="range range-primary range-xs"
         />
       </div>

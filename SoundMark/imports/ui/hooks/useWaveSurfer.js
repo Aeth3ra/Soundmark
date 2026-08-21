@@ -10,7 +10,7 @@ export const useWavesurfer = (url) => {
   const [playbackRate, setPlaybackRateState] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [zoom, setZoomState] = useState(100);
+  const [zoom, setZoomState] = useState(0);
   const [wavesurferInstance, setWavesurferInstance] = useState(null);
 
   useEffect(() => {
@@ -21,7 +21,6 @@ export const useWavesurfer = (url) => {
       container: containerRef.current,
       waveColor: "rgb(200, 0, 200)",
       progressColor: "rgb(100, 0, 100)",
-      minPxPerSec: 100
     });
 
     wavesurferRef.current = wavesurfer;
@@ -42,9 +41,7 @@ export const useWavesurfer = (url) => {
     wavesurfer.on("play", () => setIsPlaying(true));
     wavesurfer.on("pause", () => setIsPlaying(false));
     wavesurfer.on("finish", () => setIsPlaying(false));
-    wavesurfer.on("zoom", (minPxPerSec) => {
-      setZoomState(minPxPerSec);
-    });
+    wavesurfer.on("zoom", setZoomState);
 
     // set the wavesurfer instance that will be exposed
     return () => {

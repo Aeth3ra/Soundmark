@@ -12,7 +12,7 @@ export const useZoomPlugin = (wavesurferInstance) => {
 
     const plugin = wavesurferInstance.registerPlugin(
       ZoomPlugin.create({
-        scale: 0.5,
+        scale: 0.1,
         maxZoom: 1000
       })
     );

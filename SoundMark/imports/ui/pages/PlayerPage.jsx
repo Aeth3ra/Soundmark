@@ -150,12 +150,12 @@ export const PlayerPage = () => {
                   playbackRate={playbackRate}
                   currentTime={currentTime}
                   duration={duration}
+                  zoom={zoom}
                   onPlayPause={playPause}
                   onToggleLoop={toggleLoop}
                   onPlaybackRateChange={setPlaybackRate}
                   onVolumeChange={setVolume}
                   onZoomChange={setZoom}
-                  zoom={zoom}
                 />
 
                 <div className="flex-1" />
