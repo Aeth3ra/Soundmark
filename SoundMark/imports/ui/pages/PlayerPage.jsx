@@ -59,6 +59,7 @@ export const PlayerPage = () => {
     duration,
     playPause,
     setVolume,
+    setZoom,
     setPlaybackRate,
     toggleLoop,
     wavesurferInstance
@@ -149,6 +150,7 @@ export const PlayerPage = () => {
                   onToggleLoop={toggleLoop}
                   onPlaybackRateChange={setPlaybackRate}
                   onVolumeChange={setVolume}
+                  onZoomChange={setZoom}
                 />
 
                 <div className="flex-1" />

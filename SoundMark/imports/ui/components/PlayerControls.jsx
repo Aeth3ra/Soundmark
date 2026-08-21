@@ -1,4 +1,4 @@
-import { Play, Pause, Repeat, Volume2 } from "lucide-react";
+import { Play, Pause, Repeat, Volume2, ZoomIn } from "lucide-react";
 import { formatTime } from "../utils/time";
 
 export const PlayerControls = ({
@@ -10,7 +10,8 @@ export const PlayerControls = ({
   onPlayPause,
   onToggleLoop,
   onPlaybackRateChange,
-  onVolumeChange
+  onVolumeChange,
+  onZoomChange
 }) => {
   return (
     <div className="flex items-center gap-4">
@@ -62,6 +63,21 @@ export const PlayerControls = ({
           <option value="2">2×</option>
         </select>
       </label>
+
+      {/* Zoom */}
+      <div className="flex items-center gap-2 w-36">
+        <ZoomIn className="h-4 w-4 text-base-content/50 shrink-0" />
+        <input
+          type="range"
+          min="10"
+          max="1000"
+          step="10"
+          defaultValue="100"
+          onChange={(e) => onZoomChange(parseFloat(e.target.value))}
+          className="range range-primary range-xs"
+          aria-label="Waveform zoom"
+        />
+      </div>
 
       {/* Volume */}
       <div className="flex items-center gap-2 ml-auto w-36">

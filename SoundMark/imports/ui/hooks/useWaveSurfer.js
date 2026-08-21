@@ -19,7 +19,8 @@ export const useWavesurfer = (url) => {
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
       waveColor: "rgb(200, 0, 200)",
-      progressColor: "rgb(100, 0, 100)"
+      progressColor: "rgb(100, 0, 100)",
+      minPxPerSec: 100,
     });
 
     wavesurferRef.current = wavesurfer;
@@ -51,6 +52,7 @@ export const useWavesurfer = (url) => {
   // functions to control wavesurfer instance
   const playPause = () => wavesurferRef.current?.playPause();
   const setVolume = (value) => wavesurferRef.current?.setVolume(value);
+  const setZoom = (minPxPerSec) => wavesurferRef.current?.zoom(minPxPerSec);
   const setPlaybackRate = (rate) => {
     if (!wavesurferRef.current) return;
 
@@ -74,6 +76,7 @@ export const useWavesurfer = (url) => {
     duration,
     playPause,
     setVolume,
+    setZoom,
     setPlaybackRate,
     toggleLoop,
     wavesurferInstance
