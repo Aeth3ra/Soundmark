@@ -9,6 +9,7 @@ import { AnnotationsCollection } from "../../api/annotations/annotationsCollecti
 import { useAnnotationRender } from "../hooks/useAnnotationRender";
 import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
+import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl, deleteFile } from "../services/audioService";
 import { ChevronLeft, Link2, Check, ListMusic } from "lucide-react";
@@ -57,6 +58,7 @@ export const PlayerPage = () => {
     playbackRate,
     currentTime,
     duration,
+    zoom,
     playPause,
     setVolume,
     setZoom,
@@ -67,6 +69,8 @@ export const PlayerPage = () => {
 
   // Load regions plugin for wavesurfer
   const regionsPlugin = useRegionsPlugin(wavesurferInstance);
+
+  useZoomPlugin(wavesurferInstance);
 
   // Subscribes to annotation collection for the current file
   const isAnnotationsLoading = useSubscribe("annotations.forFile", fileId);
@@ -151,6 +155,7 @@ export const PlayerPage = () => {
                   onPlaybackRateChange={setPlaybackRate}
                   onVolumeChange={setVolume}
                   onZoomChange={setZoom}
+                  zoom={zoom}
                 />
 
                 <div className="flex-1" />

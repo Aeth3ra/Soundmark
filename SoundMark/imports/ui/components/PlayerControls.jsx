@@ -11,7 +11,8 @@ export const PlayerControls = ({
   onToggleLoop,
   onPlaybackRateChange,
   onVolumeChange,
-  onZoomChange
+  onZoomChange,
+  zoom
 }) => {
   return (
     <div className="flex items-center gap-4">
@@ -72,10 +73,9 @@ export const PlayerControls = ({
           min="10"
           max="1000"
           step="10"
-          defaultValue="100"
+          value={zoom}
           onChange={(e) => onZoomChange(parseFloat(e.target.value))}
           className="range range-primary range-xs"
-          aria-label="Waveform zoom"
         />
       </div>
 
