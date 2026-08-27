@@ -9,6 +9,7 @@ import { AnnotationsCollection } from "../../api/annotations/annotationsCollecti
 import { useAnnotationRender } from "../hooks/useAnnotationRender";
 import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
+import { useRegionSelection } from "../hooks/useRegionSelection";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl, deleteFile } from "../services/audioService";
@@ -16,6 +17,7 @@ import { ChevronLeft, Link2, Check, ListMusic } from "lucide-react";
 import { AnnotationList } from "../components/annotations/AnnotationList";
 import { AnnotationTooltip } from "../components/annotations/AnnotationToolTip";
 import { AnnotationMarkersLayer } from "../components/annotations/AnnotationMarkersLayer";
+import { RegionSelectionDisplay } from "../components/RegionSelectionDisplay";
 import { useGuestAccount } from "../hooks/useGuestAccount";
 import { usePresence } from "../hooks/usePresence";
 import { colourForId } from "../lib/userColour";
@@ -82,6 +84,7 @@ export const PlayerPage = () => {
 
   // Load regions plugin for wavesurfer
   const regionsPlugin = useRegionsPlugin(wavesurferInstance);
+  const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
 
   useZoomPlugin(wavesurferInstance);
 
@@ -222,20 +225,32 @@ export const PlayerPage = () => {
                 </div>
               </div>
 
-              {/* TEMPORARY: fakes a region trigger so AnnotationForm
-                  can be tested */}
-              <button
-                onClick={() => openAnnotation({ startMs: 4200, endMs: 20000 })}
-                className="btn btn-xs btn-outline gap-2 self-start ml-6 mb-4"
-              >
-                DEV: fake region trigger
-              </button>
-              <button
-                onClick={() => openAnnotation({ startMs: 1000 })}
-                className="btn btn-xs btn-outline gap-2 self-start ml-6 mb-4"
-              >
-                DEV: fake region trigger
-              </button>
+              {/* Region time display */}
+              <RegionSelectionDisplay activeRegion={activeRegion} />
+
+              {/* Region selection actions */}
+              <div className="flex items-center gap-2 self-start ml-6 mb-4">
+                <button
+                  onClick={() =>
+                    openAnnotation({
+                      startMs: activeRegion.start * 1000,
+                      endMs: activeRegion.end * 1000
+                    })
+                  }
+                  disabled={!activeRegion}
+                  className="btn btn-sm btn-outline gap-2"
+                >
+                  Create annotation
+                </button>
+
+                <button
+                  onClick={clearRegion}
+                  disabled={!activeRegion}
+                  className="btn btn-sm btn-outline gap-2"
+                >
+                  Clear region
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -254,7 +269,10 @@ export const PlayerPage = () => {
         trigger={trigger}
         fileId={fileId}
         createdBy={userId} // not implemented yet
-        onClose={closeAnnotation}
+        onClose={() => {
+          closeAnnotation();
+          clearRegion();
+        }}
       />
 
       {/* Annotation Marker on top of the annotation regions/timestamps */}
