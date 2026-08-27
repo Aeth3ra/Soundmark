@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Play, Pause, Repeat, Volume2, ZoomIn } from "lucide-react";
 import { formatTime } from "../utils/time";
 
@@ -14,6 +15,9 @@ export const PlayerControls = ({
   onZoomChange,
   zoom
 }) => {
+  // For playback
+  const [speedInput, setSpeedInput] = useState(String(playbackRate));
+
   return (
     <div className="flex items-center gap-4">
       {/* Play / Pause */}
@@ -49,20 +53,33 @@ export const PlayerControls = ({
 
       {/* Playback speed */}
       <label className="flex items-center gap-2 text-sm text-base-content/70">
-        Speed
-        <select
-          value={playbackRate}
-          onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
-          className="select select-bordered select-sm"
-          aria-label="Playback speed"
-        >
-          <option value="0.5">0.5×</option>
-          <option value="0.75">0.75×</option>
-          <option value="1">1×</option>
-          <option value="1.25">1.25×</option>
-          <option value="1.5">1.5×</option>
-          <option value="2">2×</option>
-        </select>
+        Speed:
+
+        <div className="dropdown">
+          <input
+            type="text"
+            maxLength={4}
+            value={speedInput}
+            onFocus={() => setSpeedInput("")}
+            onChange={(e) => /^\d*\.?\d*$/.test(e.target.value) && setSpeedInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && speedInput && (onPlaybackRateChange(Number(speedInput)), e.currentTarget.blur())}
+            className="input input-bordered input-sm w-14"
+          />
+
+          <ul className="dropdown-content menu bg-base-100 rounded-box shadow w-14 mt-1">
+            {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+              <li key={speed}>
+                <button
+                  type="button"
+                  onClick={() => (setSpeedInput(String(speed)), onPlaybackRateChange(speed), document.activeElement?.blur())}
+                  className="w-full justify-center px-0 tabular-nums"
+                >
+                  {speed}×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </label>
 
       {/* Zoom */}
