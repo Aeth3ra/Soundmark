@@ -17,6 +17,7 @@ import { ChevronLeft, Link2, Check, ListMusic } from "lucide-react";
 import { AnnotationList } from "../components/annotations/AnnotationList";
 import { AnnotationTooltip } from "../components/annotations/AnnotationToolTip";
 import { AnnotationMarkersLayer } from "../components/annotations/AnnotationMarkersLayer";
+import { RegionSelectionDisplay } from "../components/RegionSelectionDisplay";
 
 export const PlayerPage = () => {
   const { fileId } = useParams();
@@ -184,6 +185,9 @@ export const PlayerPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Region time display */}
+              <RegionSelectionDisplay activeRegion={activeRegion}/> 
 
               {/* Create annotation for selected region */}
               <button
