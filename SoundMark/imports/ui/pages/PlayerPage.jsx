@@ -189,17 +189,27 @@ export const PlayerPage = () => {
               {/* Region time display */}
               <RegionSelectionDisplay activeRegion={activeRegion}/> 
 
-              {/* Create annotation for selected region */}
-              <button
-                onClick={() => openAnnotation({ 
-                  startMs: activeRegion.start * 1000, 
-                  endMs: activeRegion.end * 1000,
-                })}
-                disabled={!activeRegion}
-                className="btn btn-sm btn-outline gap-2 self-start ml-6 mb-4"
-              >
-                Create annotation
-              </button>
+              {/* Region selection actions */}
+              <div className="flex items-center gap-2 self-start ml-6 mb-4">
+                <button
+                  onClick={() => openAnnotation({ 
+                    startMs: activeRegion.start * 1000, 
+                    endMs: activeRegion.end * 1000,
+                  })}
+                  disabled={!activeRegion}
+                  className="btn btn-sm btn-outline gap-2"
+                >
+                  Create annotation
+                </button>
+
+                <button
+                  onClick={clearRegion}
+                  disabled={!activeRegion}
+                  className="btn btn-sm btn-outline gap-2"
+                >
+                  Clear region
+                </button>
+              </div>
             </>
           )}
         </div>
