@@ -16,6 +16,10 @@ import { ChevronLeft, Link2, Check, ListMusic } from "lucide-react";
 import { AnnotationList } from "../components/annotations/AnnotationList";
 import { AnnotationTooltip } from "../components/annotations/AnnotationToolTip";
 import { AnnotationMarkersLayer } from "../components/annotations/AnnotationMarkersLayer";
+import { useGuestAccount } from "../hooks/useGuestAccount";
+import { usePresence } from "../hooks/usePresence";
+import { colourForId } from "../lib/userColour";
+import { WorkspaceUsers } from "../components/WorkspaceUser";
 
 export const PlayerPage = () => {
   const { fileId } = useParams();
@@ -26,6 +30,14 @@ export const PlayerPage = () => {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
   const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
+
+  // Get user
+  const { userId, name, isReady } = useGuestAccount();
+
+  const identity = {
+    userId,
+    name
+  };
 
   // Load Audio
   useEffect(() => {
@@ -50,6 +62,7 @@ export const PlayerPage = () => {
       }
     };
   }, [fileId]);
+
   // Load wavesurfer
   const {
     containerRef,
@@ -80,6 +93,13 @@ export const PlayerPage = () => {
       { sort: { start: 1 } }
     ).fetch();
   }, [fileId]);
+
+  //Get presences of other users
+  const { others: otherUsers } = usePresence({
+    fileId,
+    identity,
+    position: currentTime
+  });
 
   // Renders the annotations
   const tooltipRef = useRef(null);
@@ -115,20 +135,34 @@ export const PlayerPage = () => {
           <img src="/icon-512.png" alt="SoundMark logo" className="h-6 w-6" />
           <span className="text-lg font-bold">Soundmark</span>
         </div>
+        <div className="flex items-center gap-3">
+          {/* Workspace users */}
+          <WorkspaceUsers
+            currentUser={{
+              userId: userId,
+              name: name
+            }}
+            otherUsers={otherUsers}
+          />
 
-        <button onClick={handleShare} className="btn btn-outline btn-sm gap-2">
-          {copied ? (
-            <>
-              <Check className="h-4 w-4" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <Link2 className="h-4 w-4" />
-              Share session
-            </>
-          )}
-        </button>
+          {/* Share button */}
+          <button
+            onClick={handleShare}
+            className="btn btn-outline btn-sm gap-2"
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Link2 className="h-4 w-4" />
+                Share session
+              </>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Main area: player (left) + annotations sidebar  */}
@@ -178,7 +212,12 @@ export const PlayerPage = () => {
               <div className="flex-1 px-6 py-6">
                 <div className="bg-base-100 rounded-box shadow-xl p-6 flex flex-col">
                   <div className="bg-base-200/40 rounded-box flex-1 p-4">
-                    <WaveformDisplay containerRef={containerRef} />
+                    <WaveformDisplay
+                      containerRef={containerRef}
+                      wavesurferInstance={wavesurferInstance}
+                      duration={duration}
+                      otherUsers={otherUsers}
+                    />
                   </div>
                 </div>
               </div>
@@ -214,7 +253,7 @@ export const PlayerPage = () => {
       <AnnotationForm
         trigger={trigger}
         fileId={fileId}
-        createdBy={sessionStorage.getItem("soundmark_guest_name") || "Guest"} // not implemented yet
+        createdBy={userId} // not implemented yet
         onClose={closeAnnotation}
       />
 

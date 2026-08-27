@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
 import { upload } from "../services/audioService";
+import { Meteor } from "meteor/meteor";
 import { useGuestAccount } from "../hooks/useGuestAccount";
 
 export const UploadPage = () => {

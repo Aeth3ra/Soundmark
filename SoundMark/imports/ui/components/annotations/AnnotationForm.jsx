@@ -78,7 +78,8 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
         start: trigger.startMs / 1000,
         end: trigger.endMs != null ? trigger.endMs / 1000 : null,
         tags: selectedTags,
-        comment
+        comment,
+        createdBy
       });
       onClose();
     } catch (err) {
@@ -98,7 +99,7 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
   return (
     <div
       style={style}
-      className="bg-base-100 rounded-2xl shadow-2xl p-6 w-[26rem] max-w-[calc(100vw-2rem)] flex flex-col gap-5 border border-base-300"
+      className="bg-base-100 rounded-2xl shadow-2xl p-6 w-104 max-w-[calc(100vw-2rem)] flex flex-col gap-5 border border-base-300"
     >
       {/* Header of the form */}
       <div className="flex items-center justify-between pb-4 border-b border-base-300">
@@ -109,7 +110,7 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
           {trigger ? (
             <p className="text-base font-mono font-medium text-base-content/80">
               {trigger.endMs != null
-                ? `${formatMs(trigger.startMs)} — ${formatMs(trigger.endMs)} `
+                ? `${formatMs(trigger.startMs)} - ${formatMs(trigger.endMs)} `
                 : `at ${formatMs(trigger.startMs)} `}
             </p>
           ) : (

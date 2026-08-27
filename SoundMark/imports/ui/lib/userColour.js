@@ -8,7 +8,7 @@ const COLORS = [
   "#e879f9" // pink
 ];
 
-export function colorForId(id) {
+export function colourForId(id) {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);

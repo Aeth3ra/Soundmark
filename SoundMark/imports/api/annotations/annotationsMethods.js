@@ -7,7 +7,14 @@ Meteor.methods({
   /**
    * Method to create an annotation for an audio file
    */
-  async "annotations.create"({ fileId, start, end, tags = [], comment = "" }) {
+  async "annotations.create"({
+    fileId,
+    start,
+    end,
+    tags = [],
+    comment = "",
+    userId = null
+  }) {
     const audioFile = await AudioCollection.findOneAsync(fileId);
 
     // Check file exists
@@ -25,7 +32,7 @@ Meteor.methods({
       end,
       tags: tags,
       comment: comment.trim(),
-      createdBy: null, //Not implemented
+      createdBy: userId, //Not implemented
       createdAt: new Date(),
       updatedAt: new Date()
     });
