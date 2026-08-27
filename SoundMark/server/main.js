@@ -5,6 +5,8 @@ import { AnnotationsCollection } from "../imports/api/annotations/annotationsCol
 import "/imports/api/audio/audioMethods";
 import "/imports/api/annotations/annotationsMethods";
 import "/imports/api/annotations/annotationsPublications";
+import "/imports/api/users/guestLoginHandler";
+import "/imports/api/users/userMethods";
 
 Meteor.startup(async () => {});
 
