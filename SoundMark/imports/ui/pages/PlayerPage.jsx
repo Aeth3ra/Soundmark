@@ -9,6 +9,7 @@ import { AnnotationsCollection } from "../../api/annotations/annotationsCollecti
 import { useAnnotationRender } from "../hooks/useAnnotationRender";
 import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
+import { useRegionSelection } from "../hooks/useRegionSelection";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl, deleteFile } from "../services/audioService";
@@ -69,6 +70,7 @@ export const PlayerPage = () => {
 
   // Load regions plugin for wavesurfer
   const regionsPlugin = useRegionsPlugin(wavesurferInstance);
+  const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
 
   useZoomPlugin(wavesurferInstance);
 
@@ -183,19 +185,16 @@ export const PlayerPage = () => {
                 </div>
               </div>
 
-              {/* TEMPORARY: fakes a region trigger so AnnotationForm
-                  can be tested */}
+              {/* Create annotation for selected region */}
               <button
-                onClick={() => openAnnotation({ startMs: 4200, endMs: 20000 })}
-                className="btn btn-xs btn-outline gap-2 self-start ml-6 mb-4"
+                onClick={() => openAnnotation({ 
+                  startMs: activeRegion.start * 1000, 
+                  endMs: activeRegion.end * 1000,
+                })}
+                disabled={!activeRegion}
+                className="btn btn-sm btn-outline gap-2 self-start ml-6 mb-4"
               >
-                DEV: fake region trigger
-              </button>
-              <button
-                onClick={() => openAnnotation({ startMs: 1000 })}
-                className="btn btn-xs btn-outline gap-2 self-start ml-6 mb-4"
-              >
-                DEV: fake region trigger
+                Create annotation
               </button>
             </>
           )}
@@ -215,7 +214,10 @@ export const PlayerPage = () => {
         trigger={trigger}
         fileId={fileId}
         createdBy={sessionStorage.getItem("soundmark_guest_name") || "Guest"} // not implemented yet
-        onClose={closeAnnotation}
+        onClose={() => {
+          closeAnnotation();
+          clearRegion();
+        }}
       />
 
       {/* Annotation Marker on top of the annotation regions/timestamps */}
