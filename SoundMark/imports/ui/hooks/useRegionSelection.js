@@ -19,8 +19,10 @@ export const useRegionSelection = (regionsPlugin) => {
         });
 
         const handleCreated = (region) => {
-            // only one selection region at a time
-            regionsPlugin.clearRegions()
+            // only one selection region at a time, remove previous regions
+            regionsPlugin.getRegions().forEach((r) => {
+                if (r.id !== region.id) r.remove();
+            });
             setActiveRegion({ id: region.id, start: region.start, end: region.end});
         }
 
