@@ -18,7 +18,7 @@ export const WaveformDisplay = ({
           return (
             <div
               key={user.userId}
-              className="absolute top-0 bottom-0 pointer-events-none"
+              className="absolute top-0 bottom-0 pointer-events-none z-10"
               style={{
                 left: `${x}px`,
                 transform: "translateX(-50%)"
