@@ -13,17 +13,13 @@ meteor run
 
 Open the local application URL provided by Meteor in your browser.
 
-See [`docs/SETUP.md`](docs/SETUP.md) for the complete setup guide, including environment variables and external services.
+See [`docs/SETUP.md`](./SoundMark/docs/SETUP.md) for the complete setup guide, including environment variables and external services.
 
 ## Documentation
 
-- **[`docs/SETUP.md`](docs/SETUP.md)** — development setup, dependencies, environment variables, and running SOUNDMARK locally.
-- **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** — how the Meteor client, server, MongoDB, cloud storage, and audio-processing components interact.
-- **[`docs/FILE_STRUCTURE.md`](docs/FILE_STRUCTURE.md)** — overview of the project's directory structure and the responsibilities of its major components.
-- **[`docs/FEATURES.md`](docs/FEATURES.md)** — overview of SOUNDMARK's major features and functionality.
-- **[`docs/ANNOTATIONS.md`](docs/ANNOTATIONS.md)** — annotation creation, editing, persistence, and waveform rendering.
-- **[`docs/AUDIO_PROCESSING.md`](docs/AUDIO_PROCESSING.md)** — audio playback, waveform interaction, effects, analysis, and export.
-- **[`docs/COLLABORATION.md`](docs/COLLABORATION.md)** — real-time collaboration, presence, and synchronisation between users.
+- **[`docs/SETUP.md`](./SoundMark/docs/SETUP.md)** — development setup, dependencies, environment variables, and running SOUNDMARK locally.
+- **[`docs/ARCHITECTURE.md`](./SoundMark/docs/ARCHITECTURE.md)** — how the Meteor client, server, MongoDB, cloud storage, and audio-processing components interact.
+- **[`docs/FILE_STRUCTURE.md`](./SoundMark/docs/FILE_STRUCTURE.md)** — overview of the project's directory structure and the responsibilities of its major components.
 
 ## Project Structure
 
@@ -44,7 +40,7 @@ SOUNDMARK/
 
 > `.meteor/`, `_build/`, and `node_modules/` are generated or framework-managed directories and are not included in the application structure above.
 
-See [`docs/FILE_STRUCTURE.md`](docs/FILE_STRUCTURE.md) for a more detailed explanation of the project's organisation.
+See [`docs/FILE_STRUCTURE.md`](./SoundMark/docs/FILE_STRUCTURE.md) for a more detailed explanation of the project's organisation.
 
 ## Tech Stack
 
