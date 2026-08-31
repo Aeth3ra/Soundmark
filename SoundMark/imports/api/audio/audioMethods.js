@@ -10,6 +10,19 @@ import {
   getSignedUrl
 } from "./r2";
 
+/**
+ * Deletes the R2 object and Mongo record together.
+ */
+export async function deleteAudioFile(fileId) {
+  const file = await AudioCollection.findOneAsync(fileId);
+  if (!file) return; // already gone, nothing to do
+
+  await r2Client.send(
+    new DeleteObjectCommand({ Bucket: r2Bucket, Key: file.key })
+  );
+  await AudioCollection.removeAsync(fileId);
+}
+
 Meteor.methods({
   /**
    * Method to get URL for audio to be uploaded
@@ -45,6 +58,14 @@ Meteor.methods({
    */
   async "audio.getDownloadUrl"(fileId) {
     const file = await AudioCollection.findOneAsync(fileId);
+
+    if (!file) {
+      throw new Meteor.Error(
+        "file-not-found",
+        "Could not find the requested audio file."
+      );
+    }
+
     const command = new GetObjectCommand({
       Bucket: r2Bucket,
       Key: file.key

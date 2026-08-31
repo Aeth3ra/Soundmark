@@ -13,7 +13,6 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
   const refreshMarkerSlots = useCallback(() => {
     const slots = [];
     drawnRef.current.forEach((waveRegion, id) => {
-      console.log("slot element for", id, ":", waveRegion.element);
       slots.push({
         id,
         slotElement: waveRegion.element, // the empty box wavesurfer created
@@ -26,8 +25,6 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
 
   useEffect(() => {
     if (!regionsPlugin) return;
-    console.log("regionsPlugin:", regionsPlugin);
-    console.log("annotations:", annotations);
 
     const drawn = drawnRef.current;
     const annotationIds = new Set(annotations.map((an) => an._id));
@@ -64,15 +61,17 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
       const waveRegion = regionsPlugin.addRegion(
         isTimestamp
           ? {
+              id: `annotation-${annotation._id}`,
               start: annotation.start,
-              color: "#ff6b4a",
+              color: annotation.colour || "#ff6b4a",
               drag: false,
               resize: false
             }
           : {
+              id: `annotation-${annotation._id}`,
               start: annotation.start,
               end: annotation.end,
-              color: "rgba(74, 58, 255, 0.2)",
+              color: applyOpacity(annotation.colour, 0.2),
               drag: false,
               resize: false
             }
@@ -93,4 +92,18 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
   }, []);
 
   return markerSlots;
+};
+
+// Helper function to force 20% opacity (alpha = 0.2) on any hex color
+const applyOpacity = (hexColor, alpha = 0.2) => {
+  if (!hexColor) return `rgba(74, 58, 255, ${alpha})`;
+  // Convert 6-digit hex to RGBA
+  const hex = hexColor.replace("#", "");
+  if (hex.length === 6) {
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return hexColor;
 };

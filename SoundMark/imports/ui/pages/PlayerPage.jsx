@@ -3,7 +3,7 @@ import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
 import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
 import { useAnnotationRender } from "../hooks/useAnnotationRender";
@@ -12,8 +12,8 @@ import { useRegionsPlugin } from "../hooks/useRegions";
 import { useRegionSelection } from "../hooks/useRegionSelection";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
-import { getPlayableUrl, deleteFile } from "../services/audioService";
-import { ChevronLeft, Link2, Check, ListMusic } from "lucide-react";
+import { getPlayableUrl } from "../services/audioService";
+import { ChevronLeft, Link2, Check, ListMusic, Crown } from "lucide-react";
 import { AnnotationList } from "../components/annotations/AnnotationList";
 import { AnnotationTooltip } from "../components/annotations/AnnotationToolTip";
 import { AnnotationMarkersLayer } from "../components/annotations/AnnotationMarkersLayer";
@@ -22,6 +22,8 @@ import { useGuestAccount } from "../hooks/useGuestAccount";
 import { usePresence } from "../hooks/usePresence";
 import { colourForId } from "../lib/userColour";
 import { WorkspaceUsers } from "../components/WorkspaceUser";
+import { useUserNames } from "../hooks/useUsernames";
+import { useSession } from "../hooks/useSession";
 
 export const PlayerPage = () => {
   const { fileId } = useParams();
@@ -32,14 +34,46 @@ export const PlayerPage = () => {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
   const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
+  const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
+  const [selectedTags, setSelectedTags] = useState([]);
+
+  // Tags currently used to filter the annotation list
+  const toggleTagFilter = (tag) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+  const clearTagFilters = () => setSelectedTags([]);
+
+  // Annotations hidden from the waveform overlay (still shown, dimmed, in the list)
+  const toggleAnnotationHidden = (id) => {
+    setHiddenAnnotationIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   // Get user
   const { userId, name, isReady } = useGuestAccount();
 
-  const identity = {
-    userId,
-    name
-  };
+  const identity = useMemo(
+    () => ({
+      userId,
+      name
+    }),
+    [userId, name]
+  );
+
+  // Tracks who's hosting this file's session, and whether that host has
+  // left (host leaving ends the session for everyone else).
+  const { isHost, sessionEnded } = useSession({ fileId, userId });
+  // If session has eneded, kicks out other users
+  useEffect(() => {
+    if (sessionEnded) {
+      navigate("/", { state: { sessionEnded: true } });
+    }
+  }, [sessionEnded, navigate]);
 
   // Load Audio
   useEffect(() => {
@@ -55,15 +89,6 @@ export const PlayerPage = () => {
 
     loadAudio();
   }, [fileId, navigate]);
-
-  //Clean Up Audio (Closing/Back button)
-  useEffect(() => {
-    return () => {
-      if (fileId) {
-        deleteFile(fileId);
-      }
-    };
-  }, [fileId]);
 
   // Load wavesurfer
   const {
@@ -97,6 +122,11 @@ export const PlayerPage = () => {
     ).fetch();
   }, [fileId]);
 
+  // Subscribes to the display names of everyone who has authored an
+  // annotation here, so cards can show "who made this" without storing
+  // the name on the annotation itself.
+  const isAuthorsLoading = useSubscribe("annotations.authorsForFile", fileId);
+
   //Get presences of other users
   const { others: otherUsers } = usePresence({
     fileId,
@@ -104,9 +134,15 @@ export const PlayerPage = () => {
     position: currentTime
   });
 
+  // userId -> display name, for showing "who made this" on annotation cards
+  const userNames = useUserNames({ fileId, otherUsers, userId, name });
+
   // Renders the annotations
   const tooltipRef = useRef(null);
-  const markerSlots = useAnnotationRender(regionsPlugin, annotations);
+  const visibleAnnotations = useMemo(() => {
+    return annotations.filter((a) => !hiddenAnnotationIds.has(a._id));
+  }, [annotations, hiddenAnnotationIds]);
+  const markerSlots = useAnnotationRender(regionsPlugin, visibleAnnotations);
 
   // Copies the current link into the clipboard
   const handleShare = async () => {
@@ -139,14 +175,18 @@ export const PlayerPage = () => {
           <span className="text-lg font-bold">Soundmark</span>
         </div>
         <div className="flex items-center gap-3">
+          {/* Host indicator - only shown to the host themselves */}
+          {isHost && (
+            <span
+              className="badge badge-primary badge-sm gap-1 py-3"
+              title="Leaving will end this session for everyone"
+            >
+              <Crown className="h-3 w-3" />
+              You're hosting
+            </span>
+          )}
           {/* Workspace users */}
-          <WorkspaceUsers
-            currentUser={{
-              userId: userId,
-              name: name
-            }}
-            otherUsers={otherUsers}
-          />
+          <WorkspaceUsers currentUser={identity} otherUsers={otherUsers} />
 
           {/* Share button */}
           <button
@@ -261,6 +301,12 @@ export const PlayerPage = () => {
           isOpen={isAnnotateListOpen}
           onClose={() => setIsAnnotateListOpen(false)}
           onSeek={handleSeekToAnnotation}
+          selectedTags={selectedTags}
+          onToggleTagFilter={toggleTagFilter}
+          onClearFilters={clearTagFilters}
+          hiddenIds={hiddenAnnotationIds}
+          onToggleHidden={toggleAnnotationHidden}
+          userNames={userNames}
         />
       </div>
 
@@ -268,7 +314,6 @@ export const PlayerPage = () => {
       <AnnotationForm
         trigger={trigger}
         fileId={fileId}
-        createdBy={userId} // not implemented yet
         onClose={() => {
           closeAnnotation();
           clearRegion();

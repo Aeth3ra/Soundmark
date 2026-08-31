@@ -114,6 +114,9 @@ export const AnnotationMarker = ({ annotation, isTimestamp, tooltipRef }) => {
 //HELPERS
 //Makes the label for the marker
 export const buildAnnotationLabel = (annotation) => {
+  if (annotation.title) {
+    return annotation.title;
+  }
   if (annotation.tags?.length) {
     const shown = annotation.tags.slice(0, 2).join(", ");
     const overflow =

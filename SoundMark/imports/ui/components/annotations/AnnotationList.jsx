@@ -1,8 +1,35 @@
 import { Meteor } from "meteor/meteor";
-import { X, Trash2, Tag as TagIcon } from "lucide-react";
+import { X, Trash2, Tag as TagIcon, Filter } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
+import { useMemo } from "react";
+export const AnnotationList = ({
+  annotations,
+  isOpen,
+  onClose,
+  onSeek,
+  selectedTags = [],
+  onToggleTagFilter,
+  onClearFilters,
+  hiddenIds,
+  onToggleHidden,
+  userNames = {}
+}) => {
+  // All tags currently in use, for the filter chip row
+  const availableTags = useMemo(() => {
+    const set = new Set();
+    annotations.forEach((a) => a.tags?.forEach((t) => set.add(t)));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [annotations]);
 
-export const AnnotationList = ({ annotations, isOpen, onClose, onSeek }) => {
+  // Annotation must include every selected tag to show in the list
+  const filteredAnnotations = useMemo(() => {
+    if (selectedTags.length === 0) return annotations;
+    return annotations.filter((a) =>
+      selectedTags.every((tag) => a.tags?.includes(tag))
+    );
+  }, [annotations, selectedTags]);
+
+  const isFiltering = selectedTags.length > 0;
   return (
     <aside
       className={`shrink-0 overflow-hidden border-l border-base-300 bg-base-200 transition-all duration-300 ${
@@ -16,7 +43,9 @@ export const AnnotationList = ({ annotations, isOpen, onClose, onSeek }) => {
           <div className="flex items-baseline gap-2">
             <h2 className="font-semibold text-base-content">Annotations</h2>
             <span className="text-sm text-base-content/40">
-              {annotations.length}
+              {isFiltering
+                ? `${filteredAnnotations.length}/${annotations.length}`
+                : annotations.length}
             </span>
           </div>
           <button
@@ -28,6 +57,41 @@ export const AnnotationList = ({ annotations, isOpen, onClose, onSeek }) => {
           </button>
         </div>
 
+        {/* Tag filter chips */}
+        {availableTags.length > 0 && (
+          <div className="px-4 py-3 border-b border-base-300 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-base-content/40">
+                <Filter className="h-3 w-3" />
+                Filter by tag
+              </span>
+              {isFiltering && (
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {availableTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => onToggleTagFilter?.(tag)}
+                  className={`btn btn-xs rounded-full ${
+                    selectedTags.includes(tag) ? "btn-primary" : "btn-outline"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* List */}
         <div className="flex-1 overflow-y-auto">
           {annotations.length === 0 ? (
@@ -37,11 +101,31 @@ export const AnnotationList = ({ annotations, isOpen, onClose, onSeek }) => {
                 No annotations yet. Drag a region on the waveform to add one.
               </p>
             </div>
+          ) : filteredAnnotations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-2 px-6 text-center">
+              <TagIcon className="h-6 w-6 text-base-content/20" />
+              <p className="text-sm text-base-content/40">
+                No annotations match the selected tags.
+              </p>
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="text-sm text-primary hover:underline"
+              >
+                Clear filters
+              </button>
+            </div>
           ) : (
             <ul className="flex flex-col gap-2 p-3">
-              {annotations.map((annotation) => (
+              {filteredAnnotations.map((annotation) => (
                 <li key={annotation._id}>
-                  <AnnotationCard annotation={annotation} onSeek={onSeek} />
+                  <AnnotationCard
+                    annotation={annotation}
+                    onSeek={onSeek}
+                    hidden={hiddenIds?.has(annotation._id)}
+                    onToggleHidden={onToggleHidden}
+                    authorName={userNames[annotation.createdBy]}
+                  />
                 </li>
               ))}
             </ul>

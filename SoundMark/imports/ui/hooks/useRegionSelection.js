@@ -1,5 +1,5 @@
-import {useEffect, useState, useCallback} from "react";
-import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js"
+import { useEffect, useState, useCallback } from "react";
+import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
 
 /**
  * Enables click-and-drag region selection and tracks the active
@@ -9,41 +9,49 @@ import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js"
  * @returns {{ activeRegion: {start:number,end:number}|null, clearRegion: Function }}
  */
 export const useRegionSelection = (regionsPlugin) => {
-    const [activeRegion, setActiveRegion] = useState(null);
+  const [activeRegion, setActiveRegion] = useState(null);
 
-    useEffect(() => {
-        if (!regionsPlugin) return;
+  useEffect(() => {
+    if (!regionsPlugin) return;
 
-        regionsPlugin.enableDragSelection({
-            color: "rgba(135, 135, 221, 0.4)",
-        });
+    regionsPlugin.enableDragSelection({
+      color: "rgba(135, 135, 221, 0.4)"
+    });
 
-        const handleCreated = (region) => {
-            // only one selection region at a time, remove previous regions
-            regionsPlugin.getRegions().forEach((r) => {
-                if (r.id !== region.id) r.remove();
-            });
-            setActiveRegion({ id: region.id, start: region.start, end: region.end});
+    const handleCreated = (region) => {
+      if (region.id.startsWith("annotation-")) return;
+      // only one selection region at a time, remove previous regions
+      regionsPlugin.getRegions().forEach((r) => {
+        if (r.id !== region.id && !r.id.startsWith("annotation-")) {
+          r.remove();
         }
+      });
+      setActiveRegion({ id: region.id, start: region.start, end: region.end });
+    };
 
-        const handleUpdated = (region) => {
-            setActiveRegion({ id: region.id, start: region.start, end: region.end})
-        };
+    const handleUpdated = (region) => {
+      if (region.id.startsWith("annotation-")) return;
+      setActiveRegion({ id: region.id, start: region.start, end: region.end });
+    };
 
-        regionsPlugin.on("region-created", handleCreated)
-        regionsPlugin.on("region-updated", handleUpdated)
+    regionsPlugin.on("region-created", handleCreated);
+    regionsPlugin.on("region-updated", handleUpdated);
 
-        return () => {
-            regionsPlugin.un("region-created", handleCreated)
-            regionsPlugin.un("region-updated", handleUpdated)
-        }
-    }, [regionsPlugin]);
+    return () => {
+      regionsPlugin.un("region-created", handleCreated);
+      regionsPlugin.un("region-updated", handleUpdated);
+    };
+  }, [regionsPlugin]);
 
-    const clearRegion = useCallback(() => {
-        if (!regionsPlugin) return;
-        regionsPlugin.clearRegions();
-        setActiveRegion(null);
-    }, [regionsPlugin]);
+  const clearRegion = useCallback(() => {
+    if (!regionsPlugin) return;
+    regionsPlugin.getRegions().forEach((r) => {
+      if (!r.id.startsWith("annotation-")) {
+        r.remove();
+      }
+    });
+    setActiveRegion(null);
+  }, [regionsPlugin]);
 
-    return { activeRegion, clearRegion };
+  return { activeRegion, clearRegion };
 };

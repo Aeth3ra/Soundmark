@@ -1,5 +1,5 @@
 import { Meteor } from "meteor/meteor";
-import { check } from "meteor/check";
+import { check, Match } from "meteor/check";
 import { AnnotationsCollection } from "./annotationsCollection";
 import { AudioCollection } from "../audio/audioCollection";
 
@@ -9,12 +9,25 @@ Meteor.methods({
    */
   async "annotations.create"({
     fileId,
+    title = "",
+    colour = "",
     start,
-    end,
+    end = null,
     tags = [],
-    comment = "",
-    userId = null
+    comment = ""
   }) {
+    if (!this.userId) {
+      throw new Meteor.Error("not-authorized", "Must be logged in.");
+    }
+
+    check(fileId, String);
+    check(title, String);
+    check(colour, String);
+    check(start, Number);
+    check(end, Match.Maybe(Number));
+    check(tags, [String]);
+    check(comment, String);
+
     const audioFile = await AudioCollection.findOneAsync(fileId);
 
     // Check file exists
@@ -25,14 +38,19 @@ Meteor.methods({
       );
     }
 
-    // Insert into Mongo
+    // Insert into Mongo. createdBy is always this.userId (the calling user's
+    // account, guest or otherwise) — never trust a client-supplied id.
+    // Display name is looked up from Meteor.users.profile.name at read time
+    // rather than duplicated here.
     return await AnnotationsCollection.insertAsync({
       fileId,
+      title: title.trim(),
+      colour,
       start,
       end,
-      tags: tags,
+      tags,
       comment: comment.trim(),
-      createdBy: userId, //Not implemented
+      createdBy: this.userId,
       createdAt: new Date(),
       updatedAt: new Date()
     });

@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { upload } from "../services/audioService";
 import { Meteor } from "meteor/meteor";
 import { useGuestAccount } from "../hooks/useGuestAccount";
+import { SessionEndedToast } from "../components/SessionEndToast";
 
 export const UploadPage = () => {
   // Users
@@ -85,6 +86,8 @@ export const UploadPage = () => {
           <img src="/icon-512.png" alt="SoundMark logo" className="h-8 w-8" />
           <h1 className="text-3xl font-bold">Soundmark</h1>
         </div>
+
+        <SessionEndedToast />
 
         {/* Guest Name */}
         {!name ? (

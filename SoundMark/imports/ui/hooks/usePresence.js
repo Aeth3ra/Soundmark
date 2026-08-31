@@ -4,14 +4,20 @@ import { useSubscribe, useTracker } from "meteor/react-meteor-data";
 import { colourForId } from "../lib/userColour";
 import { PresenceCollection } from "../../api/presences/presenceCollection";
 
-const UPDATE_INTERVAL_MS = 250; // throttle how often we push our own position
-const STALE_MS = 8000; // hide a cursor if it hasn't updated in this long
+const STALE_MS = 8000;
 
-// Subscribes to everyone else's live playhead position for a file/workspace,
-// and periodically pushes the local user's own position up to the server.
 export function usePresence({ fileId, identity, position }) {
   const isLoading = useSubscribe("presence.forFile", fileId);
+
+  // Use refs so the interval can read the latest values without restarting
+  const positionRef = useRef(position);
   const lastSentRef = useRef(0);
+  const lastPositionRef = useRef(-1);
+
+  // Keep ref up to date without triggering useEffects
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
 
   const others = useTracker(() => {
     if (!identity) return [];
@@ -25,24 +31,41 @@ export function usePresence({ fileId, identity, position }) {
       .map((doc) => ({ ...doc, color: colourForId(doc.userId) }));
   }, [fileId, identity?.userId]);
 
-  // Push our own position, throttled. Only fileId + position are sent -
-  // the server derives userId/name from the authenticated session.
-  useEffect(() => {
-    if (!identity || !fileId || position == null) return;
-
-    const now = Date.now();
-    if (now - lastSentRef.current < UPDATE_INTERVAL_MS) return;
-    lastSentRef.current = now;
-
-    Meteor.callAsync("presence.update", { fileId, position }).catch((err) =>
-      console.error("Couldn't update active user", err)
-    );
-  }, [fileId, identity, position]);
-
-  // Best-effort cleanup when leaving the page/file
+  // Network Engine: Handles both fast movement updates and slow pause heartbeats
   useEffect(() => {
     if (!identity || !fileId) return;
+
+    // Send initial presence immediately upon joining
+    Meteor.callAsync("presence.update", {
+      fileId,
+      position: positionRef.current
+    }).catch(() => {});
+    lastSentRef.current = Date.now();
+
+    const intervalId = setInterval(() => {
+      const currentPos = positionRef.current;
+      const now = Date.now();
+      const posChanged = currentPos !== lastPositionRef.current;
+      const timeSinceLastPing = now - lastSentRef.current;
+
+      // Send update if position changed (throttled to 250ms) OR if paused for 5 seconds
+      if (
+        (posChanged && timeSinceLastPing >= 250) ||
+        timeSinceLastPing >= 5000
+      ) {
+        lastSentRef.current = now;
+        lastPositionRef.current = currentPos;
+
+        Meteor.callAsync("presence.update", {
+          fileId,
+          position: currentPos
+        }).catch(() => {});
+      }
+    }, 250); // Check 4 times a second
+
+    // Cleanup
     return () => {
+      clearInterval(intervalId);
       Meteor.callAsync("presence.leave", { fileId }).catch(() => {});
     };
   }, [fileId, identity?.userId]);
