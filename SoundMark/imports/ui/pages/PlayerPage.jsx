@@ -32,6 +32,7 @@ export const PlayerPage = () => {
 
   const [copied, setCopied] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
+  const [audioMissing, setAudioMissing] = useState(false);
   const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
   const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
   const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
@@ -83,8 +84,12 @@ export const PlayerPage = () => {
         return;
       }
 
-      const url = await getPlayableUrl(fileId);
-      setAudioUrl(url);
+      try {
+        const url = await getPlayableUrl(fileId);
+        setAudioUrl(url);
+      } catch (err) {
+        setAudioMissing(true);
+      }
     }
 
     loadAudio();
@@ -158,6 +163,31 @@ export const PlayerPage = () => {
     wavesurferInstance.setTime(seconds);
   };
 
+  // Session is over screen
+  if (audioMissing) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-4 bg-base-300 px-6 text-center">
+        <img
+          src="/icon-512.png"
+          alt="SoundMark logo"
+          className="h-10 w-10 opacity-70"
+        />
+        <h1 className="text-xl font-bold">This session has ended</h1>
+        <p className="text-base-content/60 text-sm max-w-sm">
+          The audio for this session is no longer available. It may have been
+          removed after the host ended things.
+        </p>
+        <button
+          onClick={() => navigate("/")}
+          className="btn btn-primary btn-sm"
+        >
+          Back to home
+        </button>
+      </div>
+    );
+  }
+
+  // In session
   return (
     <div className="h-screen flex flex-col bg-base-300">
       {/* Top header: logo + back/share */}
@@ -327,7 +357,7 @@ export const PlayerPage = () => {
       />
 
       {/* Annotation tool tip upon hover */}
-      <AnnotationTooltip ref={tooltipRef} />
+      <AnnotationTooltip ref={tooltipRef} userNames={userNames} />
     </div>
   );
 };

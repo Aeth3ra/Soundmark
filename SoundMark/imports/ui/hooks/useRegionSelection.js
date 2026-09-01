@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
 
+const SELECTION_PREFIX = "annotation-";
+
 /**
  * Enables click-and-drag region selection and tracks the active
  * region's start/end times.
@@ -19,18 +21,22 @@ export const useRegionSelection = (regionsPlugin) => {
     });
 
     const handleCreated = (region) => {
-      if (region.id.startsWith("annotation-")) return;
+      if (region.id.startsWith(SELECTION_PREFIX)) return;
       // only one selection region at a time, remove previous regions
       regionsPlugin.getRegions().forEach((r) => {
-        if (r.id !== region.id && !r.id.startsWith("annotation-")) {
+        if (r.id !== region.id && !r.id.startsWith(SELECTION_PREFIX)) {
           r.remove();
         }
       });
+
+      // Bring the new selection above any overlapping annotation regions
+      region.element?.style.setProperty("z-index", "10");
+
       setActiveRegion({ id: region.id, start: region.start, end: region.end });
     };
 
     const handleUpdated = (region) => {
-      if (region.id.startsWith("annotation-")) return;
+      if (region.id.startsWith(SELECTION_PREFIX)) return;
       setActiveRegion({ id: region.id, start: region.start, end: region.end });
     };
 
@@ -46,7 +52,7 @@ export const useRegionSelection = (regionsPlugin) => {
   const clearRegion = useCallback(() => {
     if (!regionsPlugin) return;
     regionsPlugin.getRegions().forEach((r) => {
-      if (!r.id.startsWith("annotation-")) {
+      if (!r.id.startsWith(SELECTION_PREFIX)) {
         r.remove();
       }
     });

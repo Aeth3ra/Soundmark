@@ -11,7 +11,7 @@ import { formatTime } from "../../utils/time";
 /**
  * Tooltip that appears upon hovering annotation marker
  */
-export const AnnotationTooltip = forwardRef((props, ref) => {
+export const AnnotationTooltip = forwardRef(({ userNames = {} }, ref) => {
   const [state, setState] = useState(null); // { annotation, isTimestamp, top, left, ready } | null
 
   const elRef = useRef(null);
@@ -74,8 +74,16 @@ export const AnnotationTooltip = forwardRef((props, ref) => {
         visibility: ready ? "visible" : "hidden"
       }}
     >
-      <div className="font-semibold text-neutral-content/90">{timeLabel}</div>
-
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold text-neutral-content/90">
+          {timeLabel}
+        </span>
+        {annotation.createdBy && (
+          <span className="text-neutral-content/60 text-[10px]">
+            {userNames[annotation.createdBy] ?? "Unknown"}
+          </span>
+        )}
+      </div>
       {annotation.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
           {annotation.tags.map((tag) => (
@@ -90,7 +98,7 @@ export const AnnotationTooltip = forwardRef((props, ref) => {
       )}
 
       {annotation.comment && (
-        <p className="mt-1 text-neutral-content/80 leading-snug">
+        <p className="mt-1 text-neutral-content/80 leading-snug break-words">
           {annotation.comment}
         </p>
       )}
