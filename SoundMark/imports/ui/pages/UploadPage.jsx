@@ -7,9 +7,7 @@ import { SessionEndedToast } from "../components/SessionEndToast";
 
 export const UploadPage = () => {
   // Users
-  const { userId, name, isReady } = useGuestAccount();
-  const [draftName, setDraftName] = useState("");
-  const [saving, setSaving] = useState(false);
+  const { name } = useGuestAccount();
 
   // Page navigate
   const navigate = useNavigate();
@@ -50,34 +48,6 @@ export const UploadPage = () => {
     runUpload(e.dataTransfer.files?.[0]);
   };
 
-  // Handles when user enters guest name
-  const handleNameSubmit = async (e) => {
-    e.preventDefault();
-    const trimmed = draftName.trim();
-    if (!trimmed) {
-      setError("Enter a name to continue.");
-      return;
-    }
-    setError(null);
-    setSaving(true);
-    try {
-      await Meteor.callAsync("users.setDisplayName", trimmed);
-    } catch (err) {
-      setError("Couldn't save your name. Try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Wait for guest account to initialise
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-base-300">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-base-300">
       <div className="w-full max-w-md bg-base-100 rounded-box shadow-xl p-10 flex flex-col items-center">
@@ -90,42 +60,10 @@ export const UploadPage = () => {
         <SessionEndedToast />
 
         {/* Guest Name */}
-        {!name ? (
-          <form onSubmit={handleNameSubmit} className="w-full mb-6">
-            <label className="label">
-              <span className="label-text font-medium">Enter your name</span>
-            </label>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                placeholder="e.g. Alice"
-                className="input input-bordered flex-1"
-                disabled={saving}
-                maxLength={30}
-              />
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={saving || !draftName.trim()}
-              >
-                {saving ? (
-                  <span className="loading loading-spinner loading-sm"></span>
-                ) : (
-                  "Join"
-                )}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="w-full mb-6 text-center">
-            <p className="text-sm text-base-content/60">Welcome,</p>
-            <p className="font-semibold text-lg">{name}</p>
-          </div>
-        )}
+        <div className="w-full mb-6 text-center">
+          <p className="text-sm text-base-content/60">Welcome,</p>
+          <p className="font-semibold text-lg">{name}</p>
+        </div>
 
         {/* Drag/Drop Upload Zone */}
         <div
@@ -164,13 +102,6 @@ export const UploadPage = () => {
           {/* Loading/Instruction */}
           {uploading ? (
             <span className="loading loading-spinner loading-lg text-primary"></span>
-          ) : !name ? (
-            <>
-              <p className="font-medium">Enter your name first</p>
-              <p className="text-sm text-base-content/60 mt-1">
-                Your name is required before uploading
-              </p>
-            </>
           ) : (
             <>
               <p className="font-medium">Drag an audio file here</p>
