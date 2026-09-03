@@ -7,23 +7,23 @@ const AUTO_DISMISS_MS = 5000;
 export const SessionEndedToast = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [visible, setVisible] = useState(Boolean(location.state?.sessionEnded));
+
+  const sessionEnded = Boolean(location.state?.sessionEnded);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!location.state?.sessionEnded) return;
+    if (!sessionEnded) return;
 
-    setVisible(true);
+    setDismissed(false);
 
-    // Clear the flag from history state immediately so a refresh or
-    // back-navigation doesn't show the toast again.
     navigate(location.pathname, { replace: true, state: {} });
 
-    const timer = window.setTimeout(() => setVisible(false), AUTO_DISMISS_MS);
+    const timer = window.setTimeout(() => setDismissed(true), AUTO_DISMISS_MS);
+
     return () => window.clearTimeout(timer);
-    // Only re-run when the flag itself changes, not on every navigate/location
-    // identity change (both change on every render otherwise).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state?.sessionEnded]);
+  }, [sessionEnded, navigate, location.pathname]);
+
+  const visible = sessionEnded && !dismissed;
 
   if (!visible) return null;
 
