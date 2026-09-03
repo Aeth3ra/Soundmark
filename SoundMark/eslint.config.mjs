@@ -7,19 +7,6 @@ import { defineConfig } from "eslint/config";
 export default defineConfig([
   {
     files: ["**/*.js", "**/*.jsx"],
-    rules: {
-      "react/no-unescaped-entities": "off",
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          varsIgnorePattern: "^_",
-          argsIgnorePattern: "^_"
-        }
-      ],
-      "@typescript-eslint/no-explicit-any": "off",
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/refs": "off"
-    },
     extends: [js.configs.recommended],
     plugins: {
       react,
@@ -55,7 +42,10 @@ export default defineConfig([
           varsIgnorePattern: "^_",
           argsIgnorePattern: "^_"
         }
-      ]
+      ],
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/refs": "off",
+      "react/no-unescaped-entities": "off"
     },
     settings: {
       react: {
