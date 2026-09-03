@@ -10,6 +10,7 @@ import { useAnnotationRender } from "../hooks/useAnnotationRender";
 import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
 import { useRegionSelection } from "../hooks/useRegionSelection";
+import { useRegionAnalysis } from "../hooks/useRegionAnalysis";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl } from "../services/audioService";
@@ -115,6 +116,7 @@ export const PlayerPage = () => {
   // Load regions plugin for wavesurfer
   const regionsPlugin = useRegionsPlugin(wavesurferInstance);
   const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
+  const regionAnalysis = useRegionAnalysis(wavesurferInstance, activeRegion);
 
   useZoomPlugin(wavesurferInstance);
 
@@ -296,7 +298,10 @@ export const PlayerPage = () => {
               </div>
 
               {/* Region time display */}
-              <RegionSelectionDisplay activeRegion={activeRegion} />
+              <RegionSelectionDisplay
+                activeRegion={activeRegion}
+                analysis={regionAnalysis}
+              />
 
               {/* Region selection actions */}
               <div className="flex items-center gap-2 self-start ml-6 mb-4">
