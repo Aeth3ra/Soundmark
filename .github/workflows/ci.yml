@@ -13,6 +13,7 @@ jobs:
     defaults:
       run:
         working-directory: ./SoundMark
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -22,6 +23,7 @@ jobs:
         with:
           node-version: 22
           cache: "npm"
+          cache-dependency-path: "./SoundMark/package-lock.json"
 
       - name: Install Meteor
         run: curl https://install.meteor.com/ | sh
