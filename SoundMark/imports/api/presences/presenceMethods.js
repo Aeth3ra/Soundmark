@@ -101,35 +101,37 @@ Meteor.methods({
     });
   }
 });
+/**
+ * Best-effort cleanup for guests (including hosts) who disconnected
+ *
+ */
+export async function cleanupStalePresence() {
+  const cutoff = new Date(Date.now() - STALE_MS);
+  const staleDocs = await PresenceCollection.find({
+    updatedAt: { $lt: cutoff }
+  }).fetchAsync();
 
-// Best-effort cleanup for guests (including hosts) who disconnected
-// without calling presence.leave (closed tab, lost network, crash, etc.)
-if (Meteor.isServer) {
-  Meteor.setInterval(async () => {
-    const cutoff = new Date(Date.now() - STALE_MS);
-    const staleDocs = await PresenceCollection.find({
-      updatedAt: { $lt: cutoff }
-    }).fetchAsync();
+  if (staleDocs.length === 0) return;
 
-    if (staleDocs.length === 0) return;
+  const staleByFile = new Map();
+  staleDocs.forEach((doc) => {
+    if (!staleByFile.has(doc.fileId)) staleByFile.set(doc.fileId, []);
+    staleByFile.get(doc.fileId).push(doc);
+  });
 
-    const staleByFile = new Map();
-    staleDocs.forEach((doc) => {
-      if (!staleByFile.has(doc.fileId)) staleByFile.set(doc.fileId, []);
-      staleByFile.get(doc.fileId).push(doc);
-    });
+  for (const [fileId, docs] of staleByFile) {
+    const session = await SessionsCollection.findOneAsync({ _id: fileId });
+    const hostWentStale = docs.some((d) => d.userId === session?.hostId);
 
-    for (const [fileId, docs] of staleByFile) {
-      const session = await SessionsCollection.findOneAsync({ _id: fileId });
-      const hostWentStale = docs.some((d) => d.userId === session?.hostId);
-
-      if (hostWentStale) {
-        await endSession(fileId);
-      } else {
-        await PresenceCollection.removeAsync({
-          _id: { $in: docs.map((d) => d._id) }
-        });
-      }
+    if (hostWentStale) {
+      await endSession(fileId);
+    } else {
+      await PresenceCollection.removeAsync({
+        _id: { $in: docs.map((d) => d._id) }
+      });
     }
-  }, STALE_MS);
+  }
+}
+if (Meteor.isServer) {
+  Meteor.setInterval(cleanupStalePresence, STALE_MS);
 }
