@@ -49,37 +49,38 @@ const createChord = (frequencies, duration, sampleRate = 11025) => {
   }
   return createAudioBuffer(samples, sampleRate);
 };
+if (Meteor.isClient) {
+  describe("audioAnalysis", function () {
+    it("analyses duration and pitch for a selected region", function () {
+      const result = analyseRegion(createTone(440, 3), 0.5, 2.5);
 
-describe("audioAnalysis", function () {
-  it("analyses duration and pitch for a selected region", function () {
-    const result = analyseRegion(createTone(440, 3), 0.5, 2.5);
+      assert.strictEqual(result.duration, 2);
+      assert.match(result.pitch, /^A4 \(440 Hz\)$/);
+    });
 
-    assert.strictEqual(result.duration, 2);
-    assert.match(result.pitch, /^A4 \(440 Hz\)$/);
-  });
+    it("estimates BPM from a selected click track", function () {
+      const result = analyseRegion(createClickTrack(120, 8), 0, 8);
 
-  it("estimates BPM from a selected click track", function () {
-    const result = analyseRegion(createClickTrack(120, 8), 0, 8);
+      assert.ok(Math.abs(result.bpm - 120) <= 2);
+    });
 
-    assert.ok(Math.abs(result.bpm - 120) <= 2);
-  });
+    it("estimates key from a selected chord", function () {
+      const cMajor = createChord([261.63, 329.63, 392], 3);
+      const result = analyseRegion(cMajor, 0, 3);
 
-  it("estimates key from a selected chord", function () {
-    const cMajor = createChord([261.63, 329.63, 392], 3);
-    const result = analyseRegion(cMajor, 0, 3);
+      assert.strictEqual(result.key, "C major");
+    });
 
-    assert.strictEqual(result.key, "C major");
-  });
+    it("returns empty musical values for silence", function () {
+      const silence = createAudioBuffer(new Float32Array(22050), 11025);
+      const result = analyseRegion(silence, 0, 2);
 
-  it("returns empty musical values for silence", function () {
-    const silence = createAudioBuffer(new Float32Array(22050), 11025);
-    const result = analyseRegion(silence, 0, 2);
-
-    assert.deepStrictEqual(result, {
-      duration: 2,
-      bpm: null,
-      pitch: null,
-      key: null
+      assert.deepStrictEqual(result, {
+        duration: 2,
+        bpm: null,
+        pitch: null,
+        key: null
+      });
     });
   });
-});
+}
