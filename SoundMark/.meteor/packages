@@ -25,4 +25,5 @@ rspack@1.2.0                  # Integrate Rspack into Meteor for client and serv
 accounts-base@3.3.0
 meteortesting:mocha
 dburles:factory
-johanbrook:publication-collector
+communitypackages:publication-collector@2.0.0-rc.1
+reywood:publish-composite

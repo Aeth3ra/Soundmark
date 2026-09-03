@@ -4,8 +4,8 @@
   "scripts": {
     "start": "meteor run",
     "dev": "meteor run --settings private/settings.json",
-    "test": "meteor test --once --driver-package meteortesting:mocha",
-    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
+    "test": "meteor test --once --driver-package meteortesting:mocha --settings private/settings.json",
+    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha --settings private/settings.json",
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
@@ -14,12 +14,14 @@
     "@babel/runtime": "^7.23.5",
     "@swc/helpers": "^0.5.17",
     "@tailwindcss/postcss": "^4.3.3",
+    "buffer": "^6.0.3",
     "dotenv": "^17.4.2",
     "lucide-react": "^1.28.0",
     "meteor-node-stubs": "^1.2.12",
     "meyda": "^5.6.3",
     "postcss": "^8.5.25",
     "postcss-load-config": "^6.0.1",
+    "process": "^0.11.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.18.2",
@@ -48,7 +50,10 @@
       "client": "client/main.jsx",
       "server": "server/main.js"
     },
-    "testModule": "tests/main.js",
+    "testModule": {
+      "client": "tests/client.js",
+      "server": "tests/server.js"
+    },
     "modern": true
   },
   "overrides": {

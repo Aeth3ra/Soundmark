@@ -1,6 +1,6 @@
 import { Meteor } from "meteor/meteor";
 import { assert } from "chai";
-import { PublicationCollector } from "meteor/johanbrook:publication-collector";
+import { PublicationCollector } from "meteor/communitypackages:publication-collector";
 import { PresenceCollection } from "./presenceCollection";
 import "./presencePublications"; // side-effect import: registers the publication
 
@@ -49,7 +49,7 @@ if (Meteor.isServer) {
           await collector.collect("presence.forFile", 12345);
           assert.fail("expected the publication to throw");
         } catch (err) {
-          assert.match(err.message, /Match failed/);
+          assert.match(err.message, /Match error/);
         }
       });
     });

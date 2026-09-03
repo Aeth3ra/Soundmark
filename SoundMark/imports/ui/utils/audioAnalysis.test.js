@@ -1,5 +1,5 @@
-import assert from "assert";
-import { analyseRegion } from "../imports/ui/utils/audioAnalysis";
+import { assert } from "chai";
+import { analyseRegion } from "./audioAnalysis";
 
 const createAudioBuffer = (samples, sampleRate) => ({
   duration: samples.length / sampleRate,
@@ -12,7 +12,8 @@ const createAudioBuffer = (samples, sampleRate) => ({
 const createTone = (frequency, duration, sampleRate = 11025) => {
   const samples = new Float32Array(duration * sampleRate);
   for (let index = 0; index < samples.length; index += 1) {
-    samples[index] = 0.5 * Math.sin((2 * Math.PI * frequency * index) / sampleRate);
+    samples[index] =
+      0.5 * Math.sin((2 * Math.PI * frequency * index) / sampleRate);
   }
   return createAudioBuffer(samples, sampleRate);
 };
@@ -23,9 +24,14 @@ const createClickTrack = (bpm, duration, sampleRate = 11025) => {
   const clickLength = Math.round(sampleRate * 0.02);
 
   for (let beat = 0; beat < samples.length; beat += samplesPerBeat) {
-    for (let offset = 0; offset < clickLength && beat + offset < samples.length; offset += 1) {
+    for (
+      let offset = 0;
+      offset < clickLength && beat + offset < samples.length;
+      offset += 1
+    ) {
       const decay = 1 - offset / clickLength;
-      samples[beat + offset] = decay * Math.sin((2 * Math.PI * 1000 * offset) / sampleRate);
+      samples[beat + offset] =
+        decay * Math.sin((2 * Math.PI * 1000 * offset) / sampleRate);
     }
   }
 
@@ -44,12 +50,7 @@ const createChord = (frequencies, duration, sampleRate = 11025) => {
   return createAudioBuffer(samples, sampleRate);
 };
 
-describe("SoundMark", function () {
-  it("package.json has correct name", async function () {
-    const { name } = await import("../package.json");
-    assert.strictEqual(name, "SoundMark");
-  });
-
+describe("audioAnalysis", function () {
   it("analyses duration and pitch for a selected region", function () {
     const result = analyseRegion(createTone(440, 3), 0.5, 2.5);
 
@@ -81,16 +82,4 @@ describe("SoundMark", function () {
       key: null
     });
   });
-
-  if (Meteor.isClient) {
-    it("client is not server", function () {
-      assert.strictEqual(Meteor.isServer, false);
-    });
-  }
-
-  if (Meteor.isServer) {
-    it("server is not client", function () {
-      assert.strictEqual(Meteor.isClient, false);
-    });
-  }
 });

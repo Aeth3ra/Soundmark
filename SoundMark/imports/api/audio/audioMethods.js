@@ -7,7 +7,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
-  getSignedUrl
+  r2Helpers
 } from "./r2";
 
 /**
@@ -39,7 +39,9 @@ Meteor.methods({
     });
 
     // get the upload URL
-    const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
+    const uploadUrl = await r2Helpers.getSignedUrl(r2Client, command, {
+      expiresIn: 300
+    });
 
     // Insert into Mongo
     const fileId = await AudioCollection.insertAsync({
@@ -70,7 +72,7 @@ Meteor.methods({
       Bucket: r2Bucket,
       Key: file.key
     });
-    return await getSignedUrl(r2Client, command, { expiresIn: 300 });
+    return await r2Helpers.getSignedUrl(r2Client, command, { expiresIn: 300 });
   },
 
   /**
@@ -88,7 +90,9 @@ Meteor.methods({
       Key: file.key
     });
 
-    const url = await getSignedUrl(r2Client, command, { expiresIn: 300 });
+    const url = await r2Helpers.getSignedUrl(r2Client, command, {
+      expiresIn: 300
+    });
 
     return {
       url,

@@ -99,7 +99,7 @@ if (Meteor.isServer) {
           );
           assert.fail("expected the method to throw");
         } catch (err) {
-          assert.match(err.message, /Match failed/);
+          assert.match(err.message, /Match error/);
         }
       });
     });

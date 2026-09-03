@@ -24,7 +24,7 @@ if (Meteor.isServer) {
       // the property on the *namespace* object (`import * as R2`) also
       // changes what audioMethods.js sees when it calls getSignedUrl(...).
       signedUrlStub = sinon
-        .stub(R2, "getSignedUrl")
+        .stub(R2.r2Helpers, "getSignedUrl")
         .resolves("https://signed.example.com/fake");
     });
 

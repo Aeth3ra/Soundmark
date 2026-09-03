@@ -1,6 +1,6 @@
 import { Meteor } from "meteor/meteor";
 import { assert } from "chai";
-import { PublicationCollector } from "meteor/johanbrook:publication-collector";
+import { PublicationCollector } from "meteor/communitypackages:publication-collector";
 import { AnnotationsCollection } from "./annotationsCollection";
 import "./annotationsPublications";
 
