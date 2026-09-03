@@ -7,6 +7,17 @@ import { defineConfig } from "eslint/config";
 export default defineConfig([
   {
     files: ["**/*.js", "**/*.jsx"],
+    rules: {
+      "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_"
+        }
+      ],
+      "@typescript-eslint/no-explicit-any": "off"
+    },
     extends: [js.configs.recommended],
     plugins: {
       react,
