@@ -7,7 +7,7 @@
     "test": "meteor test --once --driver-package meteortesting:mocha --settings private/settings.json",
     "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha --settings private/settings.json",
     "visualize": "meteor --production --extra-packages bundle-visualizer",
-    "test:ci": "meteor test --once --driver-package meteortesting:mocha --settings private/settings.json",
+    "test:ci": "meteor test --once --driver-package meteortesting:mocha",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
