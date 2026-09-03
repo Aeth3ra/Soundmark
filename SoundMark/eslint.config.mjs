@@ -6,7 +6,7 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   {
-    files: ["**/*.{js,jsx}"],
+    files: ["**/*.js", "**/*.jsx"],
     extends: [js.configs.recommended],
     plugins: {
       react,
