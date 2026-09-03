@@ -48,6 +48,7 @@
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "puppeteer": "^25.10.0",
     "react-refresh": "^0.17.0",
     "sinon": "^22.1.0"
   },
