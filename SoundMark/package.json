@@ -6,7 +6,10 @@
     "dev": "meteor run --settings private/settings.json",
     "test": "meteor test --once --driver-package meteortesting:mocha --settings private/settings.json",
     "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha --settings private/settings.json",
-    "visualize": "meteor --production --extra-packages bundle-visualizer"
+    "visualize": "meteor --production --extra-packages bundle-visualizer",
+    "test:ci": "meteor test --once --driver-package meteortesting:mocha",
+    "lint": "eslint . --ext .js,.jsx",
+    "lint:fix": "eslint . --ext .js,.jsx --fix"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1101.0",
@@ -42,6 +45,9 @@
     "@testing-library/user-event": "^14.6.7",
     "chai": "^6.2.2",
     "daisyui": "^5.7.11",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "react-refresh": "^0.17.0",
     "sinon": "^22.1.0"
   },
