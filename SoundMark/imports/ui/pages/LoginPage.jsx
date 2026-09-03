@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
-import { Meteor } from "meteor/meteor";
+import { setDisplayName } from "../services/userService";
 
 export const LoginPage = () => {
   const [draftName, setDraftName] = useState("");
@@ -11,18 +11,14 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const trimmed = draftName.trim();
-    if (!trimmed) {
-      setError("Enter a name to continue.");
-      return;
-    }
     setError(null);
     setSaving(true);
+
     try {
-      await Meteor.callAsync("users.setDisplayName", trimmed);
+      await setDisplayName(draftName);
       navigate(location.state?.from ?? "/", { replace: true });
     } catch (err) {
-      setError("Couldn't save your name. Try again.");
+      setError(err.message);
     } finally {
       setSaving(false);
     }
