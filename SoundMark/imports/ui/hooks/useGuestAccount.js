@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Meteor } from "meteor/meteor";
 import { useTracker } from "meteor/react-meteor-data";
-import { loginAsGuest } from "../lib/guestLogin";
+import { loginAsGuest } from "../services/guestLogin";
 
 // Ensures every visitor has a real Meteor.users account (a guest account,
 // via our own custom login handler) and exposes their id + display name.
