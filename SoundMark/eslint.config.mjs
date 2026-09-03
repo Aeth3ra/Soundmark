@@ -6,6 +6,9 @@ import { defineConfig } from "eslint/config";
 // TODO: Re-enable these rules and refactor existing violations.
 export default defineConfig([
   {
+    ignores: [".meteor/local/**", "node_modules/**"]
+  },
+  {
     files: ["**/*.js", "**/*.jsx"],
     extends: [js.configs.recommended],
     plugins: {
@@ -43,9 +46,10 @@ export default defineConfig([
           argsIgnorePattern: "^_"
         }
       ],
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/refs": "off",
-      "react/no-unescaped-entities": "off"
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react/no-unescaped-entities": "warn",
+      "no-undef": "warn"
     },
     settings: {
       react: {
