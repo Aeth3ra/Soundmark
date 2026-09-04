@@ -77,7 +77,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: "npm"
           cache-dependency-path: "./SoundMark/package-lock.json"
+
+      - name: Install Dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: npm ci
 
       - name: Install Meteor
         run: curl https://install.meteor.com/ | sh
