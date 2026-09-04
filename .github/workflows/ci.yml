@@ -59,3 +59,38 @@ jobs:
           TEST_BROWSER_DRIVER_ARGS: "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage"
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: npm run test:ci
+
+  deploy:
+    name: Deploy to Meteor Galaxy
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./SoundMark
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: "./SoundMark/package-lock.json"
+
+      - name: Install Meteor
+        run: curl https://install.meteor.com/ | sh
+
+      - name: Deploy to Galaxy
+        env:
+          GALAXY_TOKEN: ${{ secrets.GALAXY_DEPLOY_TOKEN }}
+          METEOR_SETTINGS: ${{ secrets.METEOR_SETTINGS }}
+          DEPLOY_HOSTNAME: ap-southeast-2.galaxy.meteor.com
+        run: |
+          echo "$GALAXY_TOKEN" > token.json
+          echo "$METEOR_SETTINGS" > settings.json
+          export METEOR_SESSION_FILE=token.json
+          export PATH=$PATH:$HOME/.meteor
+          meteor deploy soundmark.meteorapp.com --settings settings.json
