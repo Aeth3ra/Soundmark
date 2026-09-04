@@ -6,7 +6,14 @@ import { defineConfig } from "eslint/config";
 // TODO: Re-enable these rules and refactor existing violations.
 export default defineConfig([
   {
-    ignores: [".meteor/local/**", "node_modules/**"]
+    ignores: [
+      "**/node_modules/**",
+      "**/.meteor/**",
+      "**/_build/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/coverage/**"
+    ]
   },
   {
     files: ["**/*.js", "**/*.jsx"],
