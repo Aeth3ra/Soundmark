@@ -3,7 +3,6 @@ import { useRef, useState, useEffect } from "react";
 const TIMESTAMP_COLOR = "#ff6b4a";
 const REGION_BORDER = "rgba(74, 58, 255, 0.75)";
 const COMPACT_WIDTH_THRESHOLD = 46;
-const STEM_HEIGHT = "16px";
 const STEM_COLOR = "transparent";
 
 /**

@@ -1,4 +1,3 @@
-import { Meteor } from "meteor/meteor";
 import { Trash2, Eye, EyeOff, User } from "lucide-react";
 import { deleteAnnotation } from "../../services/annotationService";
 import { formatMs } from "../../utils/time";

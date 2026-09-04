@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { Meteor } from "meteor/meteor";
 import { X, Search, ChevronDown } from "lucide-react";
 import { TAG_CATEGORIES, ALL_PREDEFINED_TAGS } from "../../lib/tags";
 import { formatMs } from "../../utils/time";
@@ -92,7 +91,7 @@ export const AnnotationForm = ({ trigger, fileId, onClose }) => {
         comment
       });
       onClose();
-    } catch (err) {
+    } catch {
       setError("Couldn't save the annotation. Try again.");
     } finally {
       setSaving(false);

@@ -1,5 +1,4 @@
-import { Meteor } from "meteor/meteor";
-import { X, Trash2, Tag as TagIcon, Filter } from "lucide-react";
+import { X, Tag as TagIcon, Filter } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
 import { useMemo } from "react";
 export const AnnotationList = ({

@@ -7,24 +7,17 @@ const AUTO_DISMISS_MS = 5000;
 export const SessionEndedToast = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const sessionEnded = Boolean(location.state?.sessionEnded);
-  const [dismissed, setDismissed] = useState(false);
+  const [visible, setVisible] = useState(Boolean(location.state?.sessionEnded));
 
   useEffect(() => {
-    if (!sessionEnded) return;
-
-    setDismissed(false);
+    if (!location.state?.sessionEnded) return;
 
     navigate(location.pathname, { replace: true, state: {} });
 
-    const timer = window.setTimeout(() => setDismissed(true), AUTO_DISMISS_MS);
-
+    const timer = window.setTimeout(() => setVisible(false), AUTO_DISMISS_MS);
     return () => window.clearTimeout(timer);
-  }, [sessionEnded, navigate, location.pathname]);
-
-  const visible = sessionEnded && !dismissed;
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state?.sessionEnded]);
   if (!visible) return null;
 
   return (
