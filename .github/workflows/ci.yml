@@ -77,7 +77,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
           cache-dependency-path: "./SoundMark/package-lock.json"
 
       - name: Install Meteor
@@ -93,4 +92,4 @@ jobs:
           echo "$METEOR_SETTINGS" > settings.json
           export METEOR_SESSION_FILE=token.json
           export PATH=$PATH:$HOME/.meteor
-          meteor deploy soundmark.meteorapp.com --settings settings.json
+          meteor deploy soundmark.au.meteorapp.com --settings settings.json
