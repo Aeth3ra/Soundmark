@@ -25,30 +25,18 @@ jobs:
           cache: "npm"
           cache-dependency-path: "./SoundMark/package-lock.json"
 
-      - name: Install System Dependencies for Headless Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-              libnss3 \
-              libdbus-1-3 \
-              libatk1.0-0 \
-              libatk-bridge2.0-0 \
-              libcups2 \
-              libdrm2 \
-              libxcomposite1 \
-              libxdamage1 \
-              libxfixes3 \
-              libxrandr2 \
-              libgbm1 \
-              libasound2t64
+      - name: Setup Headless Chrome
+        uses: browser-actions/setup-chrome@v1
 
       - name: Install Meteor
-        run: curl https://install.meteor.com/ | sh
+        run: |
+          curl https://install.meteor.com/ | sh
+          echo "$HOME/.meteor" >> $GITHUB_PATH
 
       - name: Install Dependencies
         env:
           PUPPETEER_SKIP_DOWNLOAD: "true"
-        run: npm ci
+        run: meteor npm ci
 
       - name: Run ESLint
         run: npm run lint
@@ -80,22 +68,26 @@ jobs:
           cache: "npm"
           cache-dependency-path: "./SoundMark/package-lock.json"
 
+      - name: Install Meteor
+        run: |
+          curl https://install.meteor.com/ | sh
+          echo "$HOME/.meteor" >> $GITHUB_PATH
+
       - name: Install Dependencies
         env:
           PUPPETEER_SKIP_DOWNLOAD: "true"
-        run: npm ci
-
-      - name: Install Meteor
-        run: curl https://install.meteor.com/ | sh
+        run: meteor npm ci
 
       - name: Deploy to Galaxy
         env:
           GALAXY_TOKEN: ${{ secrets.GALAXY_DEPLOY_TOKEN }}
           METEOR_SETTINGS: ${{ secrets.METEOR_SETTINGS }}
-          DEPLOY_HOSTNAME: ap-southeast-2.galaxy.meteor.com
         run: |
           echo "$GALAXY_TOKEN" > token.json
           echo "$METEOR_SETTINGS" > settings.json
           export METEOR_SESSION_FILE=token.json
-          export PATH=$PATH:$HOME/.meteor
-          meteor deploy soundmark.au.meteorapp.com --settings settings.json
+          meteor deploy soundmark.au.meteorapp.com --settings settings.json --deploy-hostname ap-southeast-2.galaxy.meteor.com
+
+      - name: Clean up secret files
+        if: always()
+        run: rm -f token.json settings.json
