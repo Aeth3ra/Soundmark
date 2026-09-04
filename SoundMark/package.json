@@ -4,9 +4,12 @@
   "scripts": {
     "start": "meteor run",
     "dev": "meteor run --settings private/settings.json",
-    "test": "meteor test --once --driver-package meteortesting:mocha",
-    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
-    "visualize": "meteor --production --extra-packages bundle-visualizer"
+    "test": "meteor test --once --driver-package meteortesting:mocha --settings private/settings.json",
+    "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha --settings private/settings.json",
+    "visualize": "meteor --production --extra-packages bundle-visualizer",
+    "test:ci": "meteor test --once --driver-package meteortesting:mocha",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1101.0",
@@ -14,12 +17,14 @@
     "@babel/runtime": "^7.23.5",
     "@swc/helpers": "^0.5.17",
     "@tailwindcss/postcss": "^4.3.3",
-    "dotenv": "^17.4.2",
+    "buffer": "^6.0.3",
     "lucide-react": "^1.28.0",
     "meteor-node-stubs": "^1.2.12",
     "meyda": "^5.6.3",
     "postcss": "^8.5.25",
     "postcss-load-config": "^6.0.1",
+    "process": "^0.11.10",
+    "puppeteer": "^19.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.18.2",
@@ -28,21 +33,34 @@
     "wavesurfer.js": "^7.12.11"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^1.0.0",
-    "@rsdoctor/rspack-plugin": "^1.2.3",
+    "@faker-js/faker": "^10.6.0",
+    "@meteorjs/rspack": "^2.1.0",
+    "@rsdoctor/rspack-plugin": "^1.5.7",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
     "@rspack/plugin-react-refresh": "^1.4.3",
     "@svgr/webpack": "^8.1.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "chai": "^6.2.2",
     "daisyui": "^5.7.11",
-    "react-refresh": "^0.17.0"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "puppeteer-core": "^25.10.0",
+    "react-refresh": "^0.17.0",
+    "sinon": "^22.1.0"
   },
   "meteor": {
     "mainModule": {
       "client": "client/main.jsx",
       "server": "server/main.js"
     },
-    "testModule": "tests/main.js",
+    "testModule": {
+      "client": "tests/client.js",
+      "server": "tests/server.js"
+    },
     "modern": true
   },
   "overrides": {

@@ -1,9 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
 import { upload } from "../services/audioService";
+import { Meteor } from "meteor/meteor";
+import { useGuestAccount } from "../hooks/useGuestAccount";
+import { SessionEndedToast } from "../components/SessionEndToast";
 
 export const UploadPage = () => {
+  // Users
+  const { name } = useGuestAccount();
+
+  // Page navigate
   const navigate = useNavigate();
+
+  //Audio Upload
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -12,6 +21,10 @@ export const UploadPage = () => {
   //Handles uploading the file into cloud
   const runUpload = async (file) => {
     if (!file) return;
+    if (!name) {
+      setError("Enter your name before uploading an audio file.");
+      return;
+    }
     if (!file.type.startsWith("audio/")) {
       setError("Please choose an audio file (MP3, WAV, M4A, FLAC).");
       return;
@@ -43,17 +56,38 @@ export const UploadPage = () => {
           <img src="/icon-512.png" alt="SoundMark logo" className="h-8 w-8" />
           <h1 className="text-3xl font-bold">Soundmark</h1>
         </div>
+
+        <SessionEndedToast />
+
+        {/* Guest Name */}
+        <div className="w-full mb-6 text-center">
+          <p className="text-sm text-base-content/60">Welcome,</p>
+          <p className="font-semibold text-lg">{name}</p>
+        </div>
+
         {/* Drag/Drop Upload Zone */}
         <div
-          onClick={() => !uploading && inputRef.current?.click()}
+          onClick={() => {
+            if (name && !uploading) {
+              inputRef.current?.click();
+            }
+          }}
           onDrop={handleDrop}
           onDragOver={(e) => {
             e.preventDefault();
-            setDragActive(true);
+            if (name && !uploading) {
+              setDragActive(true);
+            }
           }}
           onDragLeave={() => setDragActive(false)}
           className={`w-full max-w-md border-2 border-dashed rounded-box p-12 text-center cursor-pointer transition-colors
-          ${dragActive ? "border-primary bg-base-200" : "border-base-300 bg-base-200/40"}`}
+          ${
+            !name
+              ? "border-base-300 bg-base-200/20 opacity-50 cursor-not-allowed"
+              : dragActive
+                ? "border-primary bg-base-200"
+                : "border-base-300 bg-base-200/40"
+          }`}
         >
           {/* Click Upload */}
           <input

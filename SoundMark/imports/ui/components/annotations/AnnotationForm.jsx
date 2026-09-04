@@ -1,10 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
-import { Meteor } from "meteor/meteor";
 import { X, Search, ChevronDown } from "lucide-react";
-import { TAG_CATEGORIES, ALL_PREDEFINED_TAGS } from "../lib/tags";
+import { TAG_CATEGORIES, ALL_PREDEFINED_TAGS } from "../../lib/tags";
+import { formatMs } from "../../utils/time";
+import {
+  ANNOTATION_COLOURS,
+  DEFAULT_ANNOTATION_COLOUR
+} from "../../lib/annotationColours";
+import { createAnnotation } from "../../services/annotationService";
 
-export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
+export const AnnotationForm = ({ trigger, fileId, onClose }) => {
+  const [title, setTitle] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
+  const [colour, setColour] = useState(DEFAULT_ANNOTATION_COLOUR);
   const [customTag, setCustomTag] = useState("");
   const [comment, setComment] = useState("");
   const [error, setError] = useState(null);
@@ -14,7 +21,9 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
 
   // Reset form state each time a new trigger comes in
   useEffect(() => {
+    setTitle("");
     setSelectedTags([]);
+    setColour(DEFAULT_ANNOTATION_COLOUR);
     setCustomTag("");
     setComment("");
     setTagSearch("");
@@ -72,15 +81,17 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
     setSaving(true);
     try {
       // Calls meteor backend
-      await Meteor.callAsync("annotations.create", {
+      await createAnnotation({
         fileId,
+        title,
+        colour,
         start: trigger.startMs / 1000,
         end: trigger.endMs != null ? trigger.endMs / 1000 : null,
         tags: selectedTags,
         comment
       });
       onClose();
-    } catch (err) {
+    } catch {
       setError("Couldn't save the annotation. Try again.");
     } finally {
       setSaving(false);
@@ -97,7 +108,7 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
   return (
     <div
       style={style}
-      className="bg-base-100 rounded-2xl shadow-2xl p-6 w-[26rem] max-w-[calc(100vw-2rem)] flex flex-col gap-5 border border-base-300"
+      className="bg-base-100 rounded-2xl shadow-2xl p-6 w-104 max-w-[calc(100vw-2rem)] flex flex-col gap-5 border border-base-300"
     >
       {/* Header of the form */}
       <div className="flex items-center justify-between pb-4 border-b border-base-300">
@@ -108,8 +119,8 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
           {trigger ? (
             <p className="text-base font-mono font-medium text-base-content/80">
               {trigger.endMs != null
-                ? `${trigger.startMs} ms — ${trigger.endMs} ms`
-                : `at ${trigger.startMs} ms`}
+                ? `${formatMs(trigger.startMs)} - ${formatMs(trigger.endMs)} `
+                : `at ${formatMs(trigger.startMs)} `}
             </p>
           ) : (
             <p className="text-base text-base-content/50">No region selected</p>
@@ -126,9 +137,46 @@ export const AnnotationForm = ({ trigger, fileId, createdBy, onClose }) => {
         </button>
       </div>
 
-      {/* Tags - only appear if triggered*/}
+      {/* Title + colour - only appear if triggered */}
       {trigger && (
         <>
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-base-content/40">
+              Title
+            </p>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Chorus vocal peak"
+              className="input input-bordered w-full"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-base-content/40">
+              Colour
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {ANNOTATION_COLOURS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColour(c.value)}
+                  title={c.name}
+                  aria-label={c.name}
+                  aria-pressed={colour === c.value}
+                  className={`h-7 w-7 rounded-full transition-transform ${
+                    colour === c.value
+                      ? "ring-2 ring-offset-2 ring-offset-base-100 ring-base-content scale-105"
+                      : "hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                />
+              ))}
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-base-content/40">
               Tags

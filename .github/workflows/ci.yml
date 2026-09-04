@@ -1,0 +1,93 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Unit & Integration Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./SoundMark
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: "./SoundMark/package-lock.json"
+
+      - name: Setup Headless Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install Meteor
+        run: |
+          curl https://install.meteor.com/ | sh
+          echo "$HOME/.meteor" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: meteor npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Client & Server Tests
+        env:
+          TEST_BROWSER_DRIVER: puppeteer
+          TEST_BROWSER_DRIVER_ARGS: "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage"
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: npm run test:ci
+
+  deploy:
+    name: Deploy to Meteor Galaxy
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./SoundMark
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: "./SoundMark/package-lock.json"
+
+      - name: Install Meteor
+        run: |
+          curl https://install.meteor.com/ | sh
+          echo "$HOME/.meteor" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: meteor npm ci
+
+      - name: Deploy to Galaxy
+        env:
+          GALAXY_TOKEN: ${{ secrets.GALAXY_DEPLOY_TOKEN }}
+          METEOR_SETTINGS: ${{ secrets.METEOR_SETTINGS }}
+        run: |
+          echo "$GALAXY_TOKEN" > token.json
+          echo "$METEOR_SETTINGS" > settings.json
+          export METEOR_SESSION_FILE=token.json
+          meteor deploy soundmark.au.meteorapp.com --settings settings.json --deploy-hostname ap-southeast-2.galaxy.meteor.com
+
+      - name: Clean up secret files
+        if: always()
+        run: rm -f token.json settings.json

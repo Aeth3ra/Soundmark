@@ -7,8 +7,21 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
-  getSignedUrl
+  r2Helpers
 } from "./r2";
+
+/**
+ * Deletes the R2 object and Mongo record together.
+ */
+export async function deleteAudioFile(fileId) {
+  const file = await AudioCollection.findOneAsync(fileId);
+  if (!file) return; // already gone, nothing to do
+
+  await r2Client.send(
+    new DeleteObjectCommand({ Bucket: r2Bucket, Key: file.key })
+  );
+  await AudioCollection.removeAsync(fileId);
+}
 
 Meteor.methods({
   /**
@@ -26,7 +39,9 @@ Meteor.methods({
     });
 
     // get the upload URL
-    const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
+    const uploadUrl = await r2Helpers.getSignedUrl(r2Client, command, {
+      expiresIn: 300
+    });
 
     // Insert into Mongo
     const fileId = await AudioCollection.insertAsync({
@@ -45,11 +60,19 @@ Meteor.methods({
    */
   async "audio.getDownloadUrl"(fileId) {
     const file = await AudioCollection.findOneAsync(fileId);
+
+    if (!file) {
+      throw new Meteor.Error(
+        "file-not-found",
+        "Could not find the requested audio file."
+      );
+    }
+
     const command = new GetObjectCommand({
       Bucket: r2Bucket,
       Key: file.key
     });
-    return await getSignedUrl(r2Client, command, { expiresIn: 300 });
+    return await r2Helpers.getSignedUrl(r2Client, command, { expiresIn: 300 });
   },
 
   /**
@@ -67,7 +90,9 @@ Meteor.methods({
       Key: file.key
     });
 
-    const url = await getSignedUrl(r2Client, command, { expiresIn: 300 });
+    const url = await r2Helpers.getSignedUrl(r2Client, command, {
+      expiresIn: 300
+    });
 
     return {
       url,

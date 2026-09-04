@@ -10,6 +10,7 @@ export const useWavesurfer = (url) => {
   const [playbackRate, setPlaybackRateState] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [zoom, setZoomState] = useState(0);
   const [wavesurferInstance, setWavesurferInstance] = useState(null);
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export const useWavesurfer = (url) => {
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
       waveColor: "rgb(200, 0, 200)",
-      progressColor: "rgb(100, 0, 100)"
+      progressColor: "rgb(100, 0, 100)",
     });
 
     wavesurferRef.current = wavesurfer;
@@ -29,7 +30,10 @@ export const useWavesurfer = (url) => {
     wavesurfer.load(url);
 
     // Information needed for player controls
-    wavesurfer.on("ready", () => setDuration(wavesurfer.getDuration()));
+    wavesurfer.on("ready", () => {
+      setDuration(wavesurfer.getDuration());
+      setWavesurferInstance(wavesurfer);
+    });
     wavesurfer.on("audioprocess", () =>
       setCurrentTime(wavesurfer.getCurrentTime())
     );
@@ -37,17 +41,20 @@ export const useWavesurfer = (url) => {
     wavesurfer.on("play", () => setIsPlaying(true));
     wavesurfer.on("pause", () => setIsPlaying(false));
     wavesurfer.on("finish", () => setIsPlaying(false));
+    wavesurfer.on("zoom", setZoomState);
 
     // set the wavesurfer instance that will be exposed
-    setWavesurferInstance(wavesurfer);
     return () => {
       wavesurfer.destroy();
+      setWavesurferInstance(null);
     };
   }, [url]);
 
   // functions to control wavesurfer instance
   const playPause = () => wavesurferRef.current?.playPause();
   const setVolume = (value) => wavesurferRef.current?.setVolume(value);
+  const setZoom = (value) => wavesurferRef.current?.zoom(value);
+
   const setPlaybackRate = (rate) => {
     if (!wavesurferRef.current) return;
 
@@ -69,8 +76,10 @@ export const useWavesurfer = (url) => {
     playbackRate,
     currentTime,
     duration,
+    zoom,
     playPause,
     setVolume,
+    setZoom,
     setPlaybackRate,
     toggleLoop,
     wavesurferInstance
