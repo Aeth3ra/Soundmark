@@ -8,7 +8,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Meteor } from "meteor/meteor";
 
 const { accountId, accessKeyId, secretAccessKey, bucketName } =
-  Meteor.settings.private.r2 || {};
+  Meteor.settings.private?.r2 || {};
 
 export const r2Client = new S3Client({
   region: "auto",
