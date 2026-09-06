@@ -11,6 +11,7 @@ import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
 import { useRegionSelection } from "../hooks/useRegionSelection";
 import { useRegionAnalysis } from "../hooks/useRegionAnalysis";
+import { useAnnotationAnalysis } from "../hooks/useAnnotationAnalysis";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl } from "../services/audioService";
@@ -129,6 +130,11 @@ export const PlayerPage = () => {
       { sort: { start: 1 } }
     ).fetch();
   }, [fileId]);
+  const annotationAnalyses = useAnnotationAnalysis(
+    wavesurferInstance,
+    annotations,
+    isAnnotateListOpen
+  );
 
   // Subscribes to the display names of everyone who has authored an
   // annotation here, so cards can show "who made this" without storing
@@ -345,6 +351,7 @@ export const PlayerPage = () => {
           onToggleHidden={toggleAnnotationHidden}
           userNames={userNames}
           onEdit={setEditingAnnotation}
+          analyses={annotationAnalyses}
         />
       </div>
 

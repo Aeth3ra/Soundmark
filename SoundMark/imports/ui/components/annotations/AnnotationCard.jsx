@@ -9,7 +9,8 @@ export const AnnotationCard = ({
   hidden,
   onToggleHidden,
   authorName,
-  onEdit
+  onEdit,
+  analysis
 }) => {
   // Deletes this annotation via the backend
   const handleDelete = async (e) => {
@@ -44,6 +45,8 @@ export const AnnotationCard = ({
 
   const durationMs =
     annotation.end != null ? (annotation.end - annotation.start) * 1000 : null;
+  const musicalValue = (value) =>
+    analysis?.isAnalysing ? "…" : value ?? "—";
 
   return (
     //Make the Card seek to the annotation
@@ -105,17 +108,35 @@ export const AnnotationCard = ({
         </div>
       </div>
 
-      {/* Timestamp + duration */}
+      {/* Timestamp */}
       <div className="flex items-center gap-2 mb-1.5">
         <span className="text-xs font-mono font-medium text-primary">
           {formatMs(annotation.start * 1000)}
           {annotation.end != null && ` – ${formatMs(annotation.end * 1000)}`}
         </span>
-        {durationMs != null && (
-          <span className="badge badge-ghost badge-xs font-mono">
-            {formatMs(durationMs)}
-          </span>
-        )}
+      </div>
+
+      {/* Automatically estimated region properties */}
+      <div
+        className="flex flex-wrap gap-1.5 mb-1.5"
+        title="BPM, pitch, and key are estimates from this audio region"
+      >
+        <span className="badge badge-ghost badge-sm gap-1">
+          <span className="text-base-content/40">Duration</span>
+          {durationMs == null ? "—" : formatMs(durationMs)}
+        </span>
+        <span className="badge badge-ghost badge-sm gap-1">
+          <span className="text-base-content/40">BPM</span>
+          {musicalValue(analysis?.bpm)}
+        </span>
+        <span className="badge badge-ghost badge-sm gap-1">
+          <span className="text-base-content/40">Pitch</span>
+          {musicalValue(analysis?.pitch)}
+        </span>
+        <span className="badge badge-ghost badge-sm gap-1">
+          <span className="text-base-content/40">Key</span>
+          {musicalValue(analysis?.key)}
+        </span>
       </div>
 
       {/* Tags */}
