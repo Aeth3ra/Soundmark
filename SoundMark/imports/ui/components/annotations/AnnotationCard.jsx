@@ -1,4 +1,4 @@
-import { Trash2, Eye, EyeOff, User } from "lucide-react";
+import { Trash2, Eye, EyeOff, User, Pencil } from "lucide-react";
 import { deleteAnnotation } from "../../services/annotationService";
 import { formatMs } from "../../utils/time";
 import { DEFAULT_ANNOTATION_COLOUR } from "../../lib/annotationColours";
@@ -8,7 +8,8 @@ export const AnnotationCard = ({
   onSeek,
   hidden,
   onToggleHidden,
-  authorName
+  authorName,
+  onEdit
 }) => {
   // Deletes this annotation via the backend
   const handleDelete = async (e) => {
@@ -20,6 +21,12 @@ export const AnnotationCard = ({
   const handleToggleHidden = (e) => {
     e.stopPropagation();
     onToggleHidden?.(annotation._id);
+  };
+
+  // Edit this annotation
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    onEdit?.(annotation);
   };
 
   // Seeks to the annotation on click, or Enter/Space for keyboard users
@@ -75,6 +82,17 @@ export const AnnotationCard = ({
               <Eye className="h-3.5 w-3.5" />
             )}
           </button>
+          
+          {/* Edit */}
+          <button
+            type="button"
+            onClick={handleEdit}
+            title="Edit annotation"
+            className="opacity-0 group-hover:opacity-100 btn btn-ghost btn-xs btn-circle text-base-content/40 hover:text-primary transition-opacity"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+
           {/* Delete */}
           <button
             type="button"
