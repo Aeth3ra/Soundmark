@@ -307,12 +307,13 @@ export const PlayerPage = () => {
               {/* Region selection actions */}
               <div className="flex items-center gap-2 self-start ml-6 mb-4">
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    setEditingAnnotation(null);
                     openAnnotation({
                       startMs: activeRegion.start * 1000,
                       endMs: activeRegion.end * 1000
                     })
-                  }
+                  }}
                   disabled={!activeRegion}
                   className="btn btn-sm btn-outline gap-2"
                 >

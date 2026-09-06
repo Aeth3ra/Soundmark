@@ -6,7 +6,7 @@ import {
   ANNOTATION_COLOURS,
   DEFAULT_ANNOTATION_COLOUR
 } from "../../lib/annotationColours";
-import { createAnnotation } from "../../services/annotationService";
+import { createAnnotation, updateAnnotation } from "../../services/annotationService";
 
 export const AnnotationForm = ({ trigger, annotation, fileId, onClose }) => {
   const [title, setTitle] = useState("");
@@ -94,31 +94,49 @@ export const AnnotationForm = ({ trigger, annotation, fileId, onClose }) => {
 
   // Functtion that handles when the users submits an annotation
   const handleSubmit = async () => {
-    if (!trigger) {
+    // Only require a trigger when creating
+    if (!annotation && !trigger) {
       setError("No region selected. Drag to select one first.");
       return;
     }
 
     setError(null);
     setSaving(true);
+
     try {
-      // Calls meteor backend
-      await createAnnotation({
-        fileId,
-        title,
-        colour,
-        start: trigger.startMs / 1000,
-        end: trigger.endMs != null ? trigger.endMs / 1000 : null,
-        tags: selectedTags,
-        comment
-      });
+      if (annotation) {
+        // EDIT EXISTING ANNOTATION
+        await updateAnnotation(annotation._id, {
+          title,
+          colour,
+          tags: selectedTags,
+          comment
+        });
+      } else {
+        // CREATE NEW ANNOTATION
+        await createAnnotation({
+          fileId,
+          title,
+          colour,
+          start: trigger.startMs / 1000,
+          end: trigger.endMs != null ? trigger.endMs / 1000 : null,
+          tags: selectedTags,
+          comment
+        });
+      }
+
       onClose();
     } catch {
-      setError("Couldn't save the annotation. Try again.");
+      setError(
+        annotation
+          ? "Couldn't update the annotation. Try again."
+          : "Couldn't save the annotation. Try again."
+      );
     } finally {
       setSaving(false);
     }
   };
+
   // Center location of the form
   const style = {
     position: "fixed",
