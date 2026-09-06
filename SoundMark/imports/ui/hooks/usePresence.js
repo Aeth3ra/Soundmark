@@ -20,7 +20,7 @@ export function usePresence({ fileId, identity, position }) {
   }, [position]);
 
   const others = useTracker(() => {
-    if (!identity) return [];
+    if (!identity?.userId) return [];
     const cutoff = new Date(Date.now() - STALE_MS);
     return PresenceCollection.find({
       fileId,
@@ -33,7 +33,7 @@ export function usePresence({ fileId, identity, position }) {
 
   // Network Engine: Handles both fast movement updates and slow pause heartbeats
   useEffect(() => {
-    if (!identity || !fileId) return;
+    if (!identity?.userId || !fileId) return;
 
     // Send initial presence immediately upon joining
     Meteor.callAsync("presence.update", {
