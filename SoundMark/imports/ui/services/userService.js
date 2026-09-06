@@ -11,8 +11,20 @@ export async function setDisplayName(name) {
   }
 
   try {
-    await Meteor.callAsync("users.setDisplayName", trimmed);
+    await Meteor.callAsync("user.setDisplayName", trimmed);
   } catch (err) {
     throw new Error("Couldn't save your name. Try again.");
+  }
+}
+
+/**
+ * Pings meteor's user DB to get current user client is using.
+ */
+export async function getUser() {
+  try {
+    const user = await Meteor.callAsync("user.get");
+    return user;
+  } catch (err) {
+    throw new Error("Couldn't find user. Try again.");
   }
 }

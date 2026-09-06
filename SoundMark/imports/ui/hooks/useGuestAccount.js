@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { Meteor } from "meteor/meteor";
 import { useTracker } from "meteor/react-meteor-data";
 import { loginAsGuest } from "../services/guestLogin";
+import { getUser } from "../services/userService";
 
-// Ensures every visitor has a real Meteor.users account (a guest account,
-// via our own custom login handler) and exposes their id + display name.
 export function useGuestAccount() {
   const [loginError, setLoginError] = useState(null);
+  const [settled, setSettled] = useState(false);
 
   const { userId, name, isLoggingIn } = useTracker(
     () => ({
@@ -17,15 +17,32 @@ export function useGuestAccount() {
     []
   );
 
+  // Trigger guest login only if there's no user and no resume in progress
   useEffect(() => {
     if (userId || isLoggingIn) return;
     loginAsGuest().catch((err) => setLoginError(err));
   }, [userId, isLoggingIn]);
 
+  // A round-trip to the server confirms the resumed session's data has
+  // had a fair chance to arrive, without an arbitrary timeout.
+  useEffect(() => {
+    if (!userId) {
+      setSettled(false);
+      return;
+    }
+    let cancelled = false;
+    getUser().finally(() => {
+      if (!cancelled) setSettled(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
   return {
     userId,
     name,
-    isReady: Boolean(userId),
+    isReady: settled,
     loginError
   };
 }

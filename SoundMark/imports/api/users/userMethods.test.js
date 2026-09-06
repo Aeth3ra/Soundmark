@@ -14,10 +14,10 @@ if (Meteor.isServer) {
       userId = await Meteor.users.insertAsync({ createdAt: new Date() });
     });
 
-    describe("users.setDisplayName", function () {
+    describe("user.setDisplayName", function () {
       it("throws not-authorized when no user is logged in", async function () {
         try {
-          await Meteor.server.method_handlers["users.setDisplayName"].apply(
+          await Meteor.server.method_handlers["user.setDisplayName"].apply(
             { userId: null },
             ["Alice"]
           );
@@ -30,7 +30,7 @@ if (Meteor.isServer) {
 
       it("rejects invalid argument types via check()", async function () {
         try {
-          await Meteor.server.method_handlers["users.setDisplayName"].apply(
+          await Meteor.server.method_handlers["user.setDisplayName"].apply(
             { userId },
             [12345]
           );
@@ -42,7 +42,7 @@ if (Meteor.isServer) {
 
       it("throws invalid-name when the name is empty", async function () {
         try {
-          await Meteor.server.method_handlers["users.setDisplayName"].apply(
+          await Meteor.server.method_handlers["user.setDisplayName"].apply(
             { userId },
             [""]
           );
@@ -54,7 +54,7 @@ if (Meteor.isServer) {
 
       it("throws invalid-name when the name is only whitespace", async function () {
         try {
-          await Meteor.server.method_handlers["users.setDisplayName"].apply(
+          await Meteor.server.method_handlers["user.setDisplayName"].apply(
             { userId },
             ["   \t  "]
           );
@@ -65,7 +65,7 @@ if (Meteor.isServer) {
       });
 
       it("trims the name and sets profile.name on the caller's own account", async function () {
-        await Meteor.server.method_handlers["users.setDisplayName"].apply(
+        await Meteor.server.method_handlers["user.setDisplayName"].apply(
           { userId },
           ["  Bob Smith  "]
         );
@@ -80,7 +80,7 @@ if (Meteor.isServer) {
           profile: { name: "Untouched" }
         });
 
-        await Meteor.server.method_handlers["users.setDisplayName"].apply(
+        await Meteor.server.method_handlers["user.setDisplayName"].apply(
           { userId },
           ["Carol"]
         );
@@ -90,6 +90,26 @@ if (Meteor.isServer) {
 
         assert.equal(caller.profile.name, "Carol");
         assert.equal(other.profile.name, "Untouched"); // unaffected
+      });
+    });
+
+    describe("user.get", function () {
+      it("returns null when no user is logged in", async function () {
+        const result = await Meteor.server.method_handlers["user.get"].apply(
+          { userId: null },
+          []
+        );
+        assert.isNull(result);
+      });
+      it("returns the logged-in user's profile name", async function () {
+        await Meteor.users.updateAsync(userId, {
+          $set: { profile: { name: "Alice" } }
+        });
+        const result = await Meteor.server.method_handlers["user.get"].apply(
+          { userId },
+          []
+        );
+        assert.equal(result, "Alice");
       });
     });
   });
