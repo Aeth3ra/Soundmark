@@ -11,5 +11,8 @@ Accounts.registerLoginHandler("guest", async (options) => {
     guest: true // flags this as a guest account, useful for future cleanup/filtering
   });
 
-  return { userId };
+  const stampedToken = Accounts._generateStampedLoginToken();
+  await Accounts._insertLoginToken(userId, stampedToken);
+
+  return { userId, token: stampedToken.token };
 });

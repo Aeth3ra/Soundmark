@@ -6,9 +6,9 @@ import {
   ANNOTATION_COLOURS,
   DEFAULT_ANNOTATION_COLOUR
 } from "../../lib/annotationColours";
-import { createAnnotation } from "../../services/annotationService";
+import { createAnnotation, updateAnnotation } from "../../services/annotationService";
 
-export const AnnotationForm = ({ trigger, fileId, onClose }) => {
+export const AnnotationForm = ({ trigger, annotation, fileId, onClose }) => {
   const [title, setTitle] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [colour, setColour] = useState(DEFAULT_ANNOTATION_COLOUR);
@@ -21,16 +21,27 @@ export const AnnotationForm = ({ trigger, fileId, onClose }) => {
 
   // Reset form state each time a new trigger comes in
   useEffect(() => {
-    setTitle("");
-    setSelectedTags([]);
-    setColour(DEFAULT_ANNOTATION_COLOUR);
+    if (annotation) {
+      // Editing: load the existing annotation values
+      setTitle(annotation.title || "");
+      setSelectedTags(annotation.tags || []);
+      setColour(annotation.colour || DEFAULT_ANNOTATION_COLOUR);
+      setComment(annotation.comment || "");
+    } else {
+      // Creating: start with blank/default values
+      setTitle("");
+      setSelectedTags([]);
+      setColour(DEFAULT_ANNOTATION_COLOUR);
+      setComment("");
+    }
     setCustomTag("");
-    setComment("");
     setTagSearch("");
     setError(
-      trigger === null ? "No region selected. Drag to select one first." : null
+      !annotation && trigger === null
+        ? "No region selected. Drag to select one first."
+        : null
     );
-  }, [trigger]);
+  }, [annotation, trigger]);
 
   // Handles showing the tags results during searching
   const searchResults = useMemo(() => {
@@ -39,7 +50,18 @@ export const AnnotationForm = ({ trigger, fileId, onClose }) => {
     return ALL_PREDEFINED_TAGS.filter((tag) => tag.toLowerCase().includes(q));
   }, [tagSearch]);
 
-  if (trigger === undefined) return null; // not triggered at all
+  if (trigger === undefined && !annotation) return null; // not triggered at all
+
+  // Timestamp display
+  const displayStartMs = annotation
+    ? annotation.start * 1000
+    : trigger?.startMs;
+
+  const displayEndMs = annotation
+    ? annotation.end != null
+      ? annotation.end * 1000
+      : null
+    : trigger?.endMs;
 
   //Function that handles toggling off and on the tags
   const toggleTag = (tag) => {
@@ -72,31 +94,49 @@ export const AnnotationForm = ({ trigger, fileId, onClose }) => {
 
   // Functtion that handles when the users submits an annotation
   const handleSubmit = async () => {
-    if (!trigger) {
+    // Only require a trigger when creating
+    if (!annotation && !trigger) {
       setError("No region selected. Drag to select one first.");
       return;
     }
 
     setError(null);
     setSaving(true);
+
     try {
-      // Calls meteor backend
-      await createAnnotation({
-        fileId,
-        title,
-        colour,
-        start: trigger.startMs / 1000,
-        end: trigger.endMs != null ? trigger.endMs / 1000 : null,
-        tags: selectedTags,
-        comment
-      });
+      if (annotation) {
+        // EDIT EXISTING ANNOTATION
+        await updateAnnotation(annotation._id, {
+          title,
+          colour,
+          tags: selectedTags,
+          comment
+        });
+      } else {
+        // CREATE NEW ANNOTATION
+        await createAnnotation({
+          fileId,
+          title,
+          colour,
+          start: trigger.startMs / 1000,
+          end: trigger.endMs != null ? trigger.endMs / 1000 : null,
+          tags: selectedTags,
+          comment
+        });
+      }
+
       onClose();
     } catch {
-      setError("Couldn't save the annotation. Try again.");
+      setError(
+        annotation
+          ? "Couldn't update the annotation. Try again."
+          : "Couldn't save the annotation. Try again."
+      );
     } finally {
       setSaving(false);
     }
   };
+
   // Center location of the form
   const style = {
     position: "fixed",
@@ -114,13 +154,13 @@ export const AnnotationForm = ({ trigger, fileId, onClose }) => {
       <div className="flex items-center justify-between pb-4 border-b border-base-300">
         <div>
           <p className="text-xs uppercase tracking-wide text-base-content/40 mb-1">
-            New annotation
+            {annotation ? "Edit annotation" : "New annotation"}
           </p>
-          {trigger ? (
+          {displayStartMs != null ? (
             <p className="text-base font-mono font-medium text-base-content/80">
-              {trigger.endMs != null
-                ? `${formatMs(trigger.startMs)} - ${formatMs(trigger.endMs)} `
-                : `at ${formatMs(trigger.startMs)} `}
+              {displayEndMs != null
+                ? `${formatMs(displayStartMs)} - ${formatMs(displayEndMs)} `
+                : `at ${formatMs(displayStartMs)} `}
             </p>
           ) : (
             <p className="text-base text-base-content/50">No region selected</p>
@@ -137,8 +177,8 @@ export const AnnotationForm = ({ trigger, fileId, onClose }) => {
         </button>
       </div>
 
-      {/* Title + colour - only appear if triggered */}
-      {trigger && (
+      {/* Title + colour */}
+      {(trigger || annotation) && (
         <>
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-base-content/40">
@@ -315,7 +355,7 @@ export const AnnotationForm = ({ trigger, fileId, onClose }) => {
           disabled={saving}
           className="btn btn-primary px-6"
         >
-          {saving ? "Saving..." : "Save annotation"}
+          {saving ? "Saving..." : annotation ? "Save changes" : "Save annotation"}
         </button>
       </div>
     </div>

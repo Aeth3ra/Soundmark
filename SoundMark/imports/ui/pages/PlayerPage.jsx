@@ -38,6 +38,7 @@ export const PlayerPage = () => {
   const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
   const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
   const [selectedTags, setSelectedTags] = useState([]);
+  const [editingAnnotation, setEditingAnnotation] = useState(null);
 
   // Tags currently used to filter the annotation list
   const toggleTagFilter = (tag) => {
@@ -306,12 +307,13 @@ export const PlayerPage = () => {
               {/* Region selection actions */}
               <div className="flex items-center gap-2 self-start ml-6 mb-4">
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    setEditingAnnotation(null);
                     openAnnotation({
                       startMs: activeRegion.start * 1000,
                       endMs: activeRegion.end * 1000
                     })
-                  }
+                  }}
                   disabled={!activeRegion}
                   className="btn btn-sm btn-outline gap-2"
                 >
@@ -342,15 +344,18 @@ export const PlayerPage = () => {
           hiddenIds={hiddenAnnotationIds}
           onToggleHidden={toggleAnnotationHidden}
           userNames={userNames}
+          onEdit={setEditingAnnotation}
         />
       </div>
 
-      {/* Annotation form - only appears if triggered */}
+      {/* Annotation form - only appears if triggered or editing */}
       <AnnotationForm
         trigger={trigger}
+        annotation={editingAnnotation}
         fileId={fileId}
         onClose={() => {
           closeAnnotation();
+          setEditingAnnotation(null);
           clearRegion();
         }}
       />
