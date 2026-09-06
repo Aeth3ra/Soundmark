@@ -1,6 +1,6 @@
 import { Meteor } from "meteor/meteor";
 import { Accounts } from "meteor/accounts-base";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { assert } from "chai";
 import sinon from "sinon";
 import { useGuestAccount } from "./useGuestAccount";
@@ -33,7 +33,7 @@ if (Meteor.isClient) {
       assert.isTrue(callLoginMethodStub.calledOnce);
     });
 
-    it("returns user details and isReady=true when logged in", function () {
+    it("returns user details and isReady=true when logged in", async function () {
       userIdStub.returns("user-123");
       userStub.returns({ profile: { name: "Guest User" } });
       loggingInStub.returns(false);
@@ -42,7 +42,10 @@ if (Meteor.isClient) {
 
       assert.equal(result.current.userId, "user-123");
       assert.equal(result.current.name, "Guest User");
-      assert.isTrue(result.current.isReady);
+      await waitFor(() => {
+        assert.isTrue(result.current.isReady);
+      });
+
       assert.isFalse(callLoginMethodStub.called);
     });
 

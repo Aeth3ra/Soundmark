@@ -2,27 +2,16 @@ import { Meteor } from "meteor/meteor";
 import { check } from "meteor/check";
 import { PresenceCollection } from "./presenceCollection";
 import { SessionsCollection } from "../sessions/sessionCollection";
-import { deleteAudioFile } from "../audio/audioMethods";
+import {
+  createSessionIfNeeded,
+  isHost,
+  endSession
+} from "../sessions/sessionMethods";
+
 // If a user's doc hasn't been refreshed in this long, treat them as
 // disconnected (covers closed tabs, crashes, lost connections - anything
 // that skips a clean "activeUsers.leave" call).
 const STALE_MS = 15000;
-
-// Mongo's duplicate-key error code, thrown when SessionsCollection.insertAsync
-// is called with an _id (fileId) that already has a session doc.
-const DUPLICATE_KEY_ERROR_CODE = 11000;
-
-/**
- * Ends a file's collaborative session entirely: removes the session record,
- * everyone's presence doc for that file, and the audio file itself. Only
- * ever called once we've established the departing/expired user was the
- * host.
- */
-async function endSession(fileId) {
-  await SessionsCollection.removeAsync({ _id: fileId });
-  await PresenceCollection.removeAsync({ fileId });
-  await deleteAudioFile(fileId);
-}
 
 Meteor.methods({
   /**
@@ -43,7 +32,6 @@ Meteor.methods({
     const user = await Meteor.users.findOneAsync(this.userId);
     const name = user?.profile?.name || "Guest";
 
-    // 1. Fetch existing session & presences for this file
     const existingSession = await SessionsCollection.findOneAsync({
       _id: fileId
     });
@@ -51,23 +39,12 @@ Meteor.methods({
       fileId
     }).countAsync();
 
-    // 2. Only allow creating a session if ZERO presences exist (brand new room creation)
+    // Only allow creating a session if ZERO presences exist (brand new room creation).
+    // If the session was deleted by the host but other users are still being kicked
+    // out, reject the update so they don't recreate the session or claim host status.
     if (!existingSession) {
-      if (existingPresencesCount > 0) {
-        // Session was deleted by the host, but other users are still in the process of being kicked out.
-        // Reject the update so they don't recreate the session or claim host status.
-        return;
-      }
-
-      try {
-        await SessionsCollection.insertAsync({
-          _id: fileId,
-          hostId: this.userId,
-          createdAt: new Date()
-        });
-      } catch (err) {
-        if (err.code !== DUPLICATE_KEY_ERROR_CODE) throw err;
-      }
+      if (existingPresencesCount > 0) return;
+      await createSessionIfNeeded(fileId, this.userId);
     }
 
     await PresenceCollection.upsertAsync(
@@ -87,23 +64,18 @@ Meteor.methods({
 
     const { fileId } = payload;
 
-    const session = await SessionsCollection.findOneAsync({
-      _id: fileId
-    });
-
-    if (session?.hostId === this.userId) {
+    if (await isHost(fileId, this.userId)) {
       await endSession(fileId);
       return;
     }
-    await PresenceCollection.removeAsync({
-      fileId,
-      userId: this.userId
-    });
+
+    await PresenceCollection.removeAsync({ fileId, userId: this.userId });
   }
 });
+
 /**
  * Best-effort cleanup for guests (including hosts) who disconnected
- *
+ * without a clean "presence.leave" call.
  */
 export async function cleanupStalePresence() {
   const cutoff = new Date(Date.now() - STALE_MS);
@@ -120,8 +92,10 @@ export async function cleanupStalePresence() {
   });
 
   for (const [fileId, docs] of staleByFile) {
-    const session = await SessionsCollection.findOneAsync({ _id: fileId });
-    const hostWentStale = docs.some((d) => d.userId === session?.hostId);
+    const staleUserIds = docs.map((d) => d.userId);
+    const hostWentStale = (
+      await Promise.all(staleUserIds.map((uid) => isHost(fileId, uid)))
+    ).some(Boolean);
 
     if (hostWentStale) {
       await endSession(fileId);
@@ -132,6 +106,7 @@ export async function cleanupStalePresence() {
     }
   }
 }
+
 if (Meteor.isServer) {
   Meteor.setInterval(cleanupStalePresence, STALE_MS);
 }
