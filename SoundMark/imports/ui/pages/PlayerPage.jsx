@@ -38,6 +38,7 @@ export const PlayerPage = () => {
   const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
   const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
   const [selectedTags, setSelectedTags] = useState([]);
+  const [editingAnnotation, setEditingAnnotation] = useState(null);
 
   // Tags currently used to filter the annotation list
   const toggleTagFilter = (tag) => {
@@ -342,15 +343,18 @@ export const PlayerPage = () => {
           hiddenIds={hiddenAnnotationIds}
           onToggleHidden={toggleAnnotationHidden}
           userNames={userNames}
+          onEdit={setEditingAnnotation}
         />
       </div>
 
-      {/* Annotation form - only appears if triggered */}
+      {/* Annotation form - only appears if triggered or editing */}
       <AnnotationForm
         trigger={trigger}
+        annotation={editingAnnotation}
         fileId={fileId}
         onClose={() => {
           closeAnnotation();
+          setEditingAnnotation(null);
           clearRegion();
         }}
       />

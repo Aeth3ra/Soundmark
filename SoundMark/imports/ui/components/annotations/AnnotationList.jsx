@@ -11,6 +11,7 @@ export const AnnotationList = ({
   onClearFilters,
   hiddenIds,
   onToggleHidden,
+  onEdit,
   userNames = {}
 }) => {
   // All tags currently in use, for the filter chip row
@@ -123,6 +124,7 @@ export const AnnotationList = ({
                     onSeek={onSeek}
                     hidden={hiddenIds?.has(annotation._id)}
                     onToggleHidden={onToggleHidden}
+                    onEdit={onEdit}
                     authorName={userNames[annotation.createdBy]}
                   />
                 </li>
