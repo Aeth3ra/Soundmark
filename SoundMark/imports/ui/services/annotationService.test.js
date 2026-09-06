@@ -71,19 +71,27 @@ if (Meteor.isClient) {
         );
       });
 
-      it("logs an error when Meteor.callAsync rejects", async function () {
+      it("logs and rethrows an error when Meteor.callAsync rejects", async function () {
         const fakeError = new Error("Database insert failed");
         callAsyncStub.rejects(fakeError);
 
-        await createAnnotation({
-          fileId: "file-123",
-          title: "Test",
-          colour: "#000",
-          start: 0,
-          end: 5,
-          tags: [],
-          comment: ""
-        });
+        let thrownError;
+
+        try {
+          await createAnnotation({
+            fileId: "file-123",
+            title: "Test",
+            colour: "#000",
+            start: 0,
+            end: 5,
+            tags: [],
+            comment: ""
+          });
+        } catch (err) {
+          thrownError = err;
+        }
+
+        assert.strictEqual(thrownError, fakeError);
 
         assert.isTrue(
           consoleErrorStub.calledOnceWith(
