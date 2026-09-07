@@ -1,4 +1,10 @@
 import { Meteor } from "meteor/meteor";
+import {
+  sliceAudioBuffer,
+  applyEffectsChain,
+  encodeWavBlob,
+  secondsToFileLabel
+} from "../utils/audioExport";
 
 /**
  * Function to upload audio file into cloud
@@ -65,6 +71,59 @@ export async function exportAudio(fileId) {
   try {
     link.href = objectUrl;
     link.download = download.fileName;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
+}
+
+/**
+ * Exports the currently selected timeline region as a standalone WAV file.
+ *
+ * This works entirely client-side against the waveform's already-decoded
+ * audio (wavesurferInstance.getDecodedData()) rather than re-fetching the
+ * file, so it works offline of the original upload and is fast. It runs
+ * the sliced region through applyEffectsChain() before encoding - a no-op
+ * today since effects aren't implemented, but the point where a future
+ * effects chain plugs in so exported regions keep matching what's audible.
+ *
+ * @param {Object} params
+ * @param {WaveSurfer} params.wavesurferInstance
+ * @param {number} params.start - region start, seconds
+ * @param {number} params.end - region end, seconds
+ * @param {Array} [params.effects] - reserved for future effect descriptors
+ * @param {string} [params.baseFileName]
+ */
+export async function exportRegion({
+  wavesurferInstance,
+  start,
+  end,
+  effects = [],
+  baseFileName = "soundmark-selection"
+}) {
+  const decoded = wavesurferInstance?.getDecodedData();
+
+  if (!decoded) {
+    throw new Error("Audio isn't finished loading yet.");
+  }
+
+  if (end == null || start == null || end <= start) {
+    throw new Error("Select a region before exporting.");
+  }
+
+  const sliced = sliceAudioBuffer(decoded, start, end);
+  const processed = applyEffectsChain(sliced, effects);
+  const blob = encodeWavBlob(processed);
+
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  try {
+    link.href = objectUrl;
+    link.download = `${baseFileName}-${secondsToFileLabel(start)}-${secondsToFileLabel(end)}.wav`;
 
     document.body.appendChild(link);
     link.click();
