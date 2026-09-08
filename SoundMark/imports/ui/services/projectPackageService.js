@@ -1,7 +1,11 @@
 import { Meteor } from "meteor/meteor";
 import { upload, deleteFile } from "./audioService";
 import { createAnnotation } from "./annotationService";
-import { buildProjectPackage, parseProjectPackage } from "../utils/projectPackage";
+import {
+  buildProjectPackage,
+  parseProjectPackage,
+  PACKAGE_EXTENSION
+} from "../utils/projectPackage";
 
 /**
  * Downloads a .zip package containing the audio file for `fileId` plus
@@ -37,7 +41,7 @@ export async function exportProjectPackage({ fileId, annotations }) {
 
   try {
     link.href = objectUrl;
-    link.download = `${baseName}-soundmark-package.zip`;
+    link.download = `${baseName}-soundmark-package${PACKAGE_EXTENSION}`;
 
     document.body.appendChild(link);
     link.click();
