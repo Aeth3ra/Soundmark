@@ -89,3 +89,74 @@ export async function buildProjectPackage({
 
   return zip.generateAsync({ type: "blob" });
 }
+
+/**
+ * Reads and validates a .zip project package, returning everything needed
+ * to reconstruct it as a new project. Throws ProjectPackageError with a
+ * user-facing message for anything corrupted or incompatible - never lets
+ * a malformed package partway through import.
+ *
+ * @param {File|Blob} file
+ * @returns {Promise<{fileName: string, contentType: string, annotations: Array, audioBlob: Blob}>}
+ */
+export async function parseProjectPackage(file) {
+  let zip;
+  try {
+    zip = await JSZip.loadAsync(file);
+  } catch {
+    throw new ProjectPackageError(
+      "This doesn't look like a valid SoundMark package file."
+    );
+  }
+
+  const manifestEntry = zip.file(MANIFEST_PATH);
+  const annotationsEntry = zip.file(ANNOTATIONS_PATH);
+
+  if (!manifestEntry || !annotationsEntry) {
+    throw new ProjectPackageError(
+      "This package is missing required files and can't be opened."
+    );
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(await manifestEntry.async("string"));
+  } catch {
+    throw new ProjectPackageError("This package's metadata is corrupted.");
+  }
+
+  if (manifest.version !== PACKAGE_VERSION) {
+    throw new ProjectPackageError(
+      `This package was made with an incompatible version of SoundMark (v${manifest.version ?? "unknown"}).`
+    );
+  }
+
+  if (!manifest.audioPath || !manifest.fileName || !manifest.contentType) {
+    throw new ProjectPackageError("This package's metadata is incomplete.");
+  }
+
+  const audioEntry = zip.file(manifest.audioPath);
+  if (!audioEntry) {
+    throw new ProjectPackageError("This package is missing its audio file.");
+  }
+
+  let annotations;
+  try {
+    annotations = JSON.parse(await annotationsEntry.async("string"));
+  } catch {
+    throw new ProjectPackageError("This package's annotations are corrupted.");
+  }
+
+  if (!Array.isArray(annotations) || !annotations.every(isPortableAnnotation)) {
+    throw new ProjectPackageError("This package's annotations are corrupted.");
+  }
+
+  const audioBlob = await audioEntry.async("blob");
+
+  return {
+    fileName: manifest.fileName,
+    contentType: manifest.contentType,
+    annotations,
+    audioBlob
+  };
+}
