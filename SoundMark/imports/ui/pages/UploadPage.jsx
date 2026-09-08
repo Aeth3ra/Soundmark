@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
 import { upload } from "../services/audioService";
+import { importProjectPackage } from "../services/projectPackageService";
+import { ProjectPackageError, PACKAGE_EXTENSION } from "../utils/projectPackage";
 import { Meteor } from "meteor/meteor";
 import { useGuestAccount } from "../hooks/useGuestAccount";
 import { SessionEndedToast } from "../components/SessionEndToast";
@@ -17,6 +19,10 @@ export const UploadPage = () => {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState(null);
+
+  // Project package import
+  const packageInputRef = useRef(null);
+  const [importingPackage, setImportingPackage] = useState(false);
 
   //Handles uploading the file into cloud
   const runUpload = async (file) => {
@@ -38,6 +44,35 @@ export const UploadPage = () => {
       setError("Upload failed. Please try again.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Handles importing a previously-exported .zip project package
+  // (audio + annotations), restoring it as a brand new session.
+  const runImportPackage = async (file) => {
+    if (!file) return;
+    if (!name) {
+      setError("Enter your name before importing a project package.");
+      return;
+    }
+
+    setError(null);
+    setImportingPackage(true);
+
+    try {
+      const fileId = await importProjectPackage(file);
+      navigate(`/player/${fileId}`);
+    } catch (err) {
+      setError(
+        err instanceof ProjectPackageError
+          ? err.message
+          : "Couldn't import that project package. Please try again."
+      );
+    } finally {
+      setImportingPackage(false);
+      if (packageInputRef.current) {
+        packageInputRef.current.value = "";
+      }
     }
   };
 
@@ -111,6 +146,31 @@ export const UploadPage = () => {
             </>
           )}
         </div>
+
+        {/* Project package import */}
+        <input
+          ref={packageInputRef}
+          type="file"
+          accept={`${PACKAGE_EXTENSION}`}
+          className="hidden"
+          disabled={importingPackage}
+          onChange={(e) => runImportPackage(e.target.files[0])}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (name && !importingPackage) {
+              packageInputRef.current?.click();
+            }
+          }}
+          disabled={!name || importingPackage}
+          className="btn btn-ghost btn-sm mt-4"
+        >
+          {importingPackage
+            ? "Importing package…"
+            : `Or import a project package (${PACKAGE_EXTENSION})`}
+        </button>
+
         <br></br>
       </div>
       {/* Error Messages */}

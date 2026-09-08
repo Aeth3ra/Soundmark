@@ -2,6 +2,8 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
+import { RegionExportButton } from "../components/RegionExportButton";
+import { ProjectPackageExportButton } from "../components/ProjectPackageExportButton";
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
@@ -277,6 +279,10 @@ export const PlayerPage = () => {
                 <div className="flex-1" />
 
                 <AudioExportButton fileId={fileId} />
+                <ProjectPackageExportButton
+                  fileId={fileId}
+                  annotations={annotations}
+                />
 
                 <button
                   onClick={() => setIsAnnotateListOpen((open) => !open)}
@@ -333,6 +339,8 @@ export const PlayerPage = () => {
                 >
                   Clear region
                 </button>
+
+                <RegionExportButton fileId={fileId} activeRegion={activeRegion} />
               </div>
             </>
           )}
