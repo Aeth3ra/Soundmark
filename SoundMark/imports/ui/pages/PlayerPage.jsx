@@ -321,12 +321,18 @@ export const PlayerPage = () => {
                 <button
                   onClick={() => {
                     setEditingAnnotation(null);
-                    openAnnotation({
-                      startMs: activeRegion.start * 1000,
-                      endMs: activeRegion.end * 1000
-                    })
+                    openAnnotation(
+                      activeRegion
+                        ? {
+                            startMs: activeRegion.start * 1000,
+                            endMs: activeRegion.end * 1000
+                          }
+                        : {
+                            startMs: currentTime * 1000,
+                            endMs: null
+                          }
+                    );
                   }}
-                  disabled={!activeRegion}
                   className="btn btn-sm btn-outline gap-2"
                 >
                   Create annotation
