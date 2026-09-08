@@ -6,7 +6,7 @@ import { exportRegion } from "../services/audioService";
  * Lives alongside "Create annotation" / "Clear region" in the region
  * actions row for now, until that row gets promoted to a proper menu.
  */
-export const RegionExportButton = ({ wavesurferInstance, activeRegion }) => {
+export const RegionExportButton = ({ fileId, activeRegion }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
@@ -16,7 +16,7 @@ export const RegionExportButton = ({ wavesurferInstance, activeRegion }) => {
 
     try {
       await exportRegion({
-        wavesurferInstance,
+        fileId,
         start: activeRegion.start,
         end: activeRegion.end
       });

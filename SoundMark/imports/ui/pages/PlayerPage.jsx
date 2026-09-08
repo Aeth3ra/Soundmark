@@ -335,10 +335,7 @@ export const PlayerPage = () => {
                   Clear region
                 </button>
 
-                <RegionExportButton
-                  wavesurferInstance={wavesurferInstance}
-                  activeRegion={activeRegion}
-                />
+                <RegionExportButton fileId={fileId} activeRegion={activeRegion} />
               </div>
             </>
           )}

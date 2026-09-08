@@ -80,39 +80,59 @@ export async function exportAudio(fileId) {
   }
 }
 
+const decodeAudioFile = async (arrayBuffer) => {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const context = new AudioContextClass();
+
+  try {
+    // decodeAudioData reads the file's actual sample rate/bit depth - this
+    // is deliberately independent of wavesurfer's own decoded data, which
+    // is decoded at a fixed 8kHz by default (fine for drawing peaks, far
+    // too lossy for an exported file).
+    return await context.decodeAudioData(arrayBuffer);
+  } finally {
+    context.close();
+  }
+};
+
 /**
  * Exports the currently selected timeline region as a standalone WAV file.
  *
- * This works entirely client-side against the waveform's already-decoded
- * audio (wavesurferInstance.getDecodedData()) rather than re-fetching the
- * file, so it works offline of the original upload and is fast. It runs
- * the sliced region through applyEffectsChain() before encoding - a no-op
- * today since effects aren't implemented, but the point where a future
- * effects chain plugs in so exported regions keep matching what's audible.
+ * Fetches and decodes the original audio file itself at full quality,
+ * rather than reusing wavesurferInstance.getDecodedData() - that data is
+ * decoded at a fixed low sample rate (8kHz by default) for waveform
+ * rendering performance and isn't suitable for an exported file. It then
+ * runs the sliced region through applyEffectsChain() before encoding - a
+ * no-op today since effects aren't implemented, but the point where a
+ * future effects chain plugs in so exported regions keep matching what's
+ * audible.
  *
  * @param {Object} params
- * @param {WaveSurfer} params.wavesurferInstance
+ * @param {string} params.fileId
  * @param {number} params.start - region start, seconds
  * @param {number} params.end - region end, seconds
  * @param {Array} [params.effects] - reserved for future effect descriptors
  * @param {string} [params.baseFileName]
  */
 export async function exportRegion({
-  wavesurferInstance,
+  fileId,
   start,
   end,
   effects = [],
   baseFileName = "soundmark-selection"
 }) {
-  const decoded = wavesurferInstance?.getDecodedData();
-
-  if (!decoded) {
-    throw new Error("Audio isn't finished loading yet.");
-  }
-
   if (end == null || start == null || end <= start) {
     throw new Error("Select a region before exporting.");
   }
+
+  const info = await Meteor.callAsync("audio.getExportInfo", fileId);
+  const response = await fetch(info.url);
+
+  if (!response.ok) {
+    throw new Error("Could not fetch the audio file for export.");
+  }
+
+  const decoded = await decodeAudioFile(await response.arrayBuffer());
 
   const sliced = sliceAudioBuffer(decoded, start, end);
   const processed = applyEffectsChain(sliced, effects);
