@@ -151,7 +151,7 @@ export const UploadPage = () => {
         <input
           ref={packageInputRef}
           type="file"
-          accept={`${PACKAGE_EXTENSION},.zip,application/zip`}
+          accept={`${PACKAGE_EXTENSION}`}
           className="hidden"
           disabled={importingPackage}
           onChange={(e) => runImportPackage(e.target.files[0])}
