@@ -1,5 +1,5 @@
 import { Meteor } from "meteor/meteor";
-import { check } from "meteor/check";
+import { check, Match } from "meteor/check";
 import { PresenceCollection } from "./presenceCollection";
 import { SessionsCollection } from "../sessions/sessionCollection";
 import {
@@ -18,17 +18,16 @@ Meteor.methods({
    * Upserts the calling guest's live position for a given file/workspace.
    * userId/name come from the authenticated session
    */
-  async "presence.update"(payload) {
+  async "presence.update"({ fileId, position, isPlaying, followingUserId }) {
     if (!this.userId) {
       throw new Meteor.Error("not-authorized", "Must be logged in.");
     }
 
-    check(payload, {
-      fileId: String,
-      position: Number
-    });
+    check(fileId, String);
+    check(position, Number);
+    check(isPlaying, Match.Optional(Boolean));
+    check(followingUserId, Match.Maybe(Match.OneOf(String, null)));
 
-    const { fileId, position } = payload;
     const user = await Meteor.users.findOneAsync(this.userId);
     const name = user?.profile?.name || "Guest";
 
@@ -49,7 +48,15 @@ Meteor.methods({
 
     await PresenceCollection.upsertAsync(
       { fileId, userId: this.userId },
-      { $set: { name, position, updatedAt: new Date() } }
+      {
+        $set: {
+          name,
+          position,
+          isPlaying: Boolean(isPlaying),
+          followingUserId: followingUserId || null,
+          updatedAt: new Date()
+        }
+      }
     );
   },
 
