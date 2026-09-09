@@ -1,5 +1,4 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
 import { RegionExportButton } from "../components/RegionExportButton";
@@ -28,6 +27,7 @@ import { colourForId } from "../lib/userColour";
 import { WorkspaceUsers } from "../components/WorkspaceUser";
 import { useUserNames } from "../hooks/useUsernames";
 import { useSession } from "../hooks/useSession";
+import { WaveformDisplay } from "../components/waveform/WaveformDisplay";
 
 export const PlayerPage = () => {
   const { fileId } = useParams();
@@ -346,7 +346,10 @@ export const PlayerPage = () => {
                   Clear region
                 </button>
 
-                <RegionExportButton fileId={fileId} activeRegion={activeRegion} />
+                <RegionExportButton
+                  fileId={fileId}
+                  activeRegion={activeRegion}
+                />
               </div>
             </>
           )}
