@@ -3,7 +3,9 @@ import { UserPlayhead } from "./UserPlayhead";
 export const UserPresenceOverlay = ({
   users = [],
   duration,
-  waveformWidth
+  waveformWidth,
+  followingUserId,
+  onToggleLock
 }) => {
   if (!duration || duration <= 0 || !waveformWidth || waveformWidth <= 0) {
     return null;
@@ -13,7 +15,17 @@ export const UserPresenceOverlay = ({
     <>
       {users.map((user) => {
         const x = (user.position / duration) * waveformWidth;
-        return <UserPlayhead key={user.userId} user={user} positionPx={x} />;
+        const isLocked = user.userId === followingUserId;
+
+        return (
+          <UserPlayhead
+            key={user.userId}
+            user={user}
+            positionPx={x}
+            isLocked={isLocked}
+            onToggleLock={onToggleLock}
+          />
+        );
       })}
     </>
   );

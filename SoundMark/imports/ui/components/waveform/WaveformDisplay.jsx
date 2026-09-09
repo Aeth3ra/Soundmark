@@ -4,19 +4,26 @@ export const WaveformDisplay = ({
   containerRef,
   wavesurferInstance,
   duration,
-  otherUsers = []
+  otherUsers = [],
+  followingUserId,
+  onToggleLock
 }) => {
   const waveformWidth = wavesurferInstance?.getWrapper()?.scrollWidth ?? 0;
 
   return (
-    <div className="relative w-full">
-      <div ref={containerRef} />
+    <div className="relative w-full flex flex-col gap-2">
+      {/* Waveform Canvas Container */}
+      <div className="relative w-full">
+        <div ref={containerRef} />
 
-      <UserPresenceOverlay
-        users={otherUsers}
-        duration={duration}
-        waveformWidth={waveformWidth}
-      />
+        <UserPresenceOverlay
+          users={otherUsers}
+          duration={duration}
+          waveformWidth={waveformWidth}
+          followingUserId={followingUserId}
+          onToggleLock={onToggleLock}
+        />
+      </div>
     </div>
   );
 };

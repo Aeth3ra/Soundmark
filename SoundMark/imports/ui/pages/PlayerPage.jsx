@@ -28,6 +28,9 @@ import { WorkspaceUsers } from "../components/WorkspaceUser";
 import { useUserNames } from "../hooks/useUsernames";
 import { useSession } from "../hooks/useSession";
 import { WaveformDisplay } from "../components/waveform/WaveformDisplay";
+import { useWaveformSync } from "../hooks/useWaveformSync";
+import { SyncStatusToggle } from "../components/SyncStatusToggle";
+import { ToastError } from "../components/ToastError";
 
 export const PlayerPage = () => {
   const { fileId } = useParams();
@@ -42,6 +45,7 @@ export const PlayerPage = () => {
   const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
   const [selectedTags, setSelectedTags] = useState([]);
   const [editingAnnotation, setEditingAnnotation] = useState(null);
+  const [followingUserId, setFollowingUserId] = useState(null);
 
   // Tags currently used to filter the annotation list
   const toggleTagFilter = (tag) => {
@@ -109,7 +113,10 @@ export const PlayerPage = () => {
     currentTime,
     duration,
     zoom,
+    play,
+    pause,
     playPause,
+    seekTo,
     setVolume,
     setZoom,
     setPlaybackRate,
@@ -147,8 +154,24 @@ export const PlayerPage = () => {
   const { others: otherUsers } = usePresence({
     fileId,
     identity,
-    position: currentTime
+    position: currentTime,
+    isPlaying,
+    followingUserId
   });
+
+  //For playhead sync
+  const { targetUser, syncError, clearSyncError, stopFollowing, toggleFollow } =
+    useWaveformSync({
+      duration,
+      otherUsers,
+      currentUserId: identity?.userId,
+      followingUserId,
+      setFollowingUserId,
+      seekTo,
+      play,
+      pause,
+      isPlaying
+    });
 
   // userId -> display name, for showing "who made this" on annotation cards
   const userNames = useUserNames({ fileId, otherUsers, userId, name });
@@ -277,7 +300,10 @@ export const PlayerPage = () => {
                 />
 
                 <div className="flex-1" />
-
+                <SyncStatusToggle
+                  targetUser={targetUser}
+                  onUnlock={stopFollowing}
+                />
                 <AudioExportButton fileId={fileId} />
                 <ProjectPackageExportButton
                   fileId={fileId}
@@ -305,6 +331,8 @@ export const PlayerPage = () => {
                       wavesurferInstance={wavesurferInstance}
                       duration={duration}
                       otherUsers={otherUsers}
+                      followingUserId={followingUserId}
+                      onToggleLock={toggleFollow}
                     />
                   </div>
                 </div>
@@ -392,6 +420,13 @@ export const PlayerPage = () => {
 
       {/* Annotation tool tip upon hover */}
       <AnnotationTooltip ref={tooltipRef} userNames={userNames} />
+
+      {/* Render the generic toast at the bottom of the page */}
+      <ToastError
+        message={syncError}
+        onClose={clearSyncError}
+        autoDismissMs={5000}
+      />
     </div>
   );
 };
