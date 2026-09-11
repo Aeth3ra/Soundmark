@@ -18,6 +18,7 @@
     "@swc/helpers": "^0.5.17",
     "@tailwindcss/postcss": "^4.3.3",
     "buffer": "^6.0.3",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.28.0",
     "meteor-node-stubs": "^1.2.12",
     "meyda": "^5.6.3",

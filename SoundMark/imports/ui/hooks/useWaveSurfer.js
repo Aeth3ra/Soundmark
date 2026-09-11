@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import WaveSurfer from "wavesurfer.js";
 
 export const useWavesurfer = (url) => {
@@ -20,7 +20,7 @@ export const useWavesurfer = (url) => {
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
       waveColor: "rgb(200, 0, 200)",
-      progressColor: "rgb(100, 0, 100)",
+      progressColor: "rgb(100, 0, 100)"
     });
 
     wavesurferRef.current = wavesurfer;
@@ -51,23 +51,31 @@ export const useWavesurfer = (url) => {
   }, [url]);
 
   // functions to control wavesurfer instance
-  const playPause = () => wavesurferRef.current?.playPause();
-  const setVolume = (value) => wavesurferRef.current?.setVolume(value);
-  const setZoom = (value) => wavesurferRef.current?.zoom(value);
+  const play = useCallback(() => wavesurferRef.current?.play(), []);
+  const pause = useCallback(() => wavesurferRef.current?.pause(), []);
+  const playPause = useCallback(() => wavesurferRef.current?.playPause(), []);
+  const setVolume = useCallback(
+    (val) => wavesurferRef.current?.setVolume(val),
+    []
+  );
+  const setZoom = useCallback((val) => wavesurferRef.current?.zoom(val), []);
 
-  const setPlaybackRate = (rate) => {
+  const seekTo = useCallback((progressRatio) => {
+    wavesurferRef.current?.seekTo(progressRatio);
+  }, []);
+
+  const setPlaybackRate = useCallback((rate) => {
     if (!wavesurferRef.current) return;
-
     wavesurferRef.current.setPlaybackRate(rate, true);
     setPlaybackRateState(rate);
-  };
-  const toggleLoop = () => {
+  }, []);
+
+  const toggleLoop = useCallback(() => {
     const media = wavesurferRef.current?.getMediaElement();
     if (!media) return;
-
     media.loop = !media.loop;
     setIsLooping(media.loop);
-  };
+  }, []);
 
   return {
     containerRef,
@@ -77,7 +85,10 @@ export const useWavesurfer = (url) => {
     currentTime,
     duration,
     zoom,
+    play,
+    pause,
     playPause,
+    seekTo,
     setVolume,
     setZoom,
     setPlaybackRate,

@@ -1,7 +1,8 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { WaveformDisplay } from "../components/WaveformDisplay";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
+import { RegionExportButton } from "../components/RegionExportButton";
+import { ProjectPackageExportButton } from "../components/ProjectPackageExportButton";
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
@@ -11,6 +12,7 @@ import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
 import { useRegionSelection } from "../hooks/useRegionSelection";
 import { useRegionAnalysis } from "../hooks/useRegionAnalysis";
+import { useAnnotationAnalysis } from "../hooks/useAnnotationAnalysis";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl } from "../services/audioService";
@@ -25,6 +27,10 @@ import { colourForId } from "../lib/userColour";
 import { WorkspaceUsers } from "../components/WorkspaceUser";
 import { useUserNames } from "../hooks/useUsernames";
 import { useSession } from "../hooks/useSession";
+import { WaveformDisplay } from "../components/waveform/WaveformDisplay";
+import { useWaveformSync } from "../hooks/useWaveformSync";
+import { SyncStatusToggle } from "../components/SyncStatusToggle";
+import { ToastError } from "../components/ToastError";
 
 export const PlayerPage = () => {
   const { fileId } = useParams();
@@ -39,6 +45,7 @@ export const PlayerPage = () => {
   const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
   const [selectedTags, setSelectedTags] = useState([]);
   const [editingAnnotation, setEditingAnnotation] = useState(null);
+  const [followingUserId, setFollowingUserId] = useState(null);
 
   // Tags currently used to filter the annotation list
   const toggleTagFilter = (tag) => {
@@ -106,7 +113,10 @@ export const PlayerPage = () => {
     currentTime,
     duration,
     zoom,
+    play,
+    pause,
     playPause,
+    seekTo,
     setVolume,
     setZoom,
     setPlaybackRate,
@@ -129,6 +139,11 @@ export const PlayerPage = () => {
       { sort: { start: 1 } }
     ).fetch();
   }, [fileId]);
+  const annotationAnalyses = useAnnotationAnalysis(
+    wavesurferInstance,
+    annotations,
+    isAnnotateListOpen
+  );
 
   // Subscribes to the display names of everyone who has authored an
   // annotation here, so cards can show "who made this" without storing
@@ -139,8 +154,28 @@ export const PlayerPage = () => {
   const { others: otherUsers } = usePresence({
     fileId,
     identity,
-    position: currentTime
+    position: currentTime,
+    playbackRate,
+    isPlaying,
+    followingUserId
   });
+
+  //For playhead sync
+  const { targetUser, syncError, clearSyncError, stopFollowing, toggleFollow } =
+    useWaveformSync({
+      duration,
+      otherUsers,
+      currentUserId: identity?.userId,
+      followingUserId,
+      setFollowingUserId,
+      currentTime,
+      seekTo,
+      play,
+      pause,
+      isPlaying,
+      playbackRate,
+      setPlaybackRate
+    });
 
   // userId -> display name, for showing "who made this" on annotation cards
   const userNames = useUserNames({ fileId, otherUsers, userId, name });
@@ -269,8 +304,15 @@ export const PlayerPage = () => {
                 />
 
                 <div className="flex-1" />
-
+                <SyncStatusToggle
+                  targetUser={targetUser}
+                  onUnlock={stopFollowing}
+                />
                 <AudioExportButton fileId={fileId} />
+                <ProjectPackageExportButton
+                  fileId={fileId}
+                  annotations={annotations}
+                />
 
                 <button
                   onClick={() => setIsAnnotateListOpen((open) => !open)}
@@ -293,6 +335,8 @@ export const PlayerPage = () => {
                       wavesurferInstance={wavesurferInstance}
                       duration={duration}
                       otherUsers={otherUsers}
+                      followingUserId={followingUserId}
+                      onToggleLock={toggleFollow}
                     />
                   </div>
                 </div>
@@ -309,12 +353,18 @@ export const PlayerPage = () => {
                 <button
                   onClick={() => {
                     setEditingAnnotation(null);
-                    openAnnotation({
-                      startMs: activeRegion.start * 1000,
-                      endMs: activeRegion.end * 1000
-                    })
+                    openAnnotation(
+                      activeRegion
+                        ? {
+                            startMs: activeRegion.start * 1000,
+                            endMs: activeRegion.end * 1000
+                          }
+                        : {
+                            startMs: currentTime * 1000,
+                            endMs: null
+                          }
+                    );
                   }}
-                  disabled={!activeRegion}
                   className="btn btn-sm btn-outline gap-2"
                 >
                   Create annotation
@@ -327,6 +377,11 @@ export const PlayerPage = () => {
                 >
                   Clear region
                 </button>
+
+                <RegionExportButton
+                  fileId={fileId}
+                  activeRegion={activeRegion}
+                />
               </div>
             </>
           )}
@@ -345,6 +400,7 @@ export const PlayerPage = () => {
           onToggleHidden={toggleAnnotationHidden}
           userNames={userNames}
           onEdit={setEditingAnnotation}
+          analyses={annotationAnalyses}
         />
       </div>
 
@@ -368,6 +424,13 @@ export const PlayerPage = () => {
 
       {/* Annotation tool tip upon hover */}
       <AnnotationTooltip ref={tooltipRef} userNames={userNames} />
+
+      {/* Render the generic toast at the bottom of the page */}
+      <ToastError
+        message={syncError}
+        onClose={clearSyncError}
+        autoDismissMs={5000}
+      />
     </div>
   );
 };

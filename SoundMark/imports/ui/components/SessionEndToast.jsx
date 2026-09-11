@@ -10,14 +10,26 @@ export const SessionEndedToast = () => {
   const [visible, setVisible] = useState(Boolean(location.state?.sessionEnded));
 
   useEffect(() => {
-    if (!location.state?.sessionEnded) return;
+    // Remove sessionEnded from the router state so refreshing the page doesn't show the toast again
+    if (location.state?.sessionEnded) {
+      navigate(location.pathname, {
+        replace: true,
+        state: {}
+      });
+    }
+  }, [location.state?.sessionEnded, location.pathname, navigate]);
 
-    navigate(location.pathname, { replace: true, state: {} });
+  useEffect(() => {
+    // Automatically hide the toast after 5 seconds
+    if (!visible) return;
 
-    const timer = window.setTimeout(() => setVisible(false), AUTO_DISMISS_MS);
+    const timer = window.setTimeout(() => {
+      setVisible(false);
+    }, AUTO_DISMISS_MS);
+
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state?.sessionEnded]);
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
