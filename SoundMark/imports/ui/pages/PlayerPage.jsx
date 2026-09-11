@@ -155,6 +155,7 @@ export const PlayerPage = () => {
     fileId,
     identity,
     position: currentTime,
+    playbackRate,
     isPlaying,
     followingUserId
   });
@@ -167,10 +168,13 @@ export const PlayerPage = () => {
       currentUserId: identity?.userId,
       followingUserId,
       setFollowingUserId,
+      currentTime,
       seekTo,
       play,
       pause,
-      isPlaying
+      isPlaying,
+      playbackRate,
+      setPlaybackRate
     });
 
   // userId -> display name, for showing "who made this" on annotation cards

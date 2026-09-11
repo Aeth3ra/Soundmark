@@ -33,6 +33,7 @@ if (Meteor.isClient) {
           identity: { userId: "user-1" },
           position: 12.5,
           isPlaying: true,
+          playbackRate: 1.5,
           followingUserId: "user-3"
         })
       );
@@ -42,6 +43,7 @@ if (Meteor.isClient) {
           fileId: "file-123",
           position: 12.5,
           isPlaying: true,
+          playbackRate: 1.5,
           followingUserId: "user-3"
         })
       );
@@ -84,6 +86,7 @@ if (Meteor.isClient) {
           fileId: "file-123",
           position: 5.0,
           isPlaying: false,
+          playbackRate: 1,
           followingUserId: null
         })
       );
@@ -114,13 +117,15 @@ if (Meteor.isClient) {
           fileId: "file-123",
           position: 6.0,
           isPlaying: false,
+          playbackRate: 1,
           followingUserId: null
         })
       );
     });
 
-    it("sends immediate update when isPlaying or followingUserId state changes", function () {
+    it("sends immediate update when isPlaying, playbackRate, or followingUserId state changes", function () {
       let isPlaying = false;
+      let playbackRate = 1;
       let followingUserId = null;
 
       const { rerender } = renderHook(() =>
@@ -129,6 +134,7 @@ if (Meteor.isClient) {
           identity: { userId: "user-1" },
           position: 5.0,
           isPlaying,
+          playbackRate,
           followingUserId
         })
       );
@@ -148,6 +154,27 @@ if (Meteor.isClient) {
           fileId: "file-123",
           position: 5.0,
           isPlaying: true,
+          playbackRate: 1,
+          followingUserId: null
+        })
+      );
+
+      callAsyncStub.resetHistory();
+
+      // Change playback rate
+      playbackRate = 2;
+      rerender();
+
+      act(() => {
+        clock.tick(250);
+      });
+
+      assert.isTrue(
+        callAsyncStub.calledWith("presence.update", {
+          fileId: "file-123",
+          position: 5.0,
+          isPlaying: true,
+          playbackRate: 2,
           followingUserId: null
         })
       );
@@ -167,6 +194,7 @@ if (Meteor.isClient) {
           fileId: "file-123",
           position: 5.0,
           isPlaying: true,
+          playbackRate: 2,
           followingUserId: "user-2"
         })
       );

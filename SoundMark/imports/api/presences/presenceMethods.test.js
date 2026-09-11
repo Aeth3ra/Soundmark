@@ -72,6 +72,18 @@ if (Meteor.isServer) {
         }
       });
 
+      it("rejects invalid types for playbackRate", async function () {
+        try {
+          await Meteor.server.method_handlers["presence.update"].apply(
+            { userId },
+            [{ fileId, position: 10, playbackRate: "fast" }]
+          );
+          assert.fail("expected the method to throw");
+        } catch (err) {
+          assert.match(err.message, /Match error/);
+        }
+      });
+
       it("creates a new session and marks the caller as host when the room is empty", async function () {
         await Meteor.server.method_handlers["presence.update"].apply(
           { userId },
@@ -80,6 +92,7 @@ if (Meteor.isServer) {
               fileId,
               position: 12,
               isPlaying: true,
+              playbackRate: 1.5,
               followingUserId: "targetUser"
             }
           ]
@@ -96,11 +109,12 @@ if (Meteor.isServer) {
         assert.isOk(presence);
         assert.equal(presence.position, 12);
         assert.strictEqual(presence.isPlaying, true);
+        assert.equal(presence.playbackRate, 1.5);
         assert.equal(presence.followingUserId, "targetUser");
         assert.equal(presence.name, "Guest"); // no profile.name set on this user
       });
 
-      it("defaults isPlaying to false and followingUserId to null when omitted", async function () {
+      it("defaults isPlaying to false, playbackRate to 1, and followingUserId to null when omitted", async function () {
         await Meteor.server.method_handlers["presence.update"].apply(
           { userId },
           [{ fileId, position: 5 }]
@@ -112,6 +126,7 @@ if (Meteor.isServer) {
         });
         assert.isOk(presence);
         assert.strictEqual(presence.isPlaying, false);
+        assert.strictEqual(presence.playbackRate, 1);
         assert.strictEqual(presence.followingUserId, null);
       });
 
@@ -136,6 +151,29 @@ if (Meteor.isServer) {
 
         presence = await PresenceCollection.findOneAsync({ fileId, userId });
         assert.strictEqual(presence.isPlaying, false);
+      });
+
+      it("persists updates when playbackRate changes", async function () {
+        // First update: default rate
+        await Meteor.server.method_handlers["presence.update"].apply(
+          { userId },
+          [{ fileId, position: 15, playbackRate: 1 }]
+        );
+
+        let presence = await PresenceCollection.findOneAsync({
+          fileId,
+          userId
+        });
+        assert.strictEqual(presence.playbackRate, 1);
+
+        // Second update: sped up
+        await Meteor.server.method_handlers["presence.update"].apply(
+          { userId },
+          [{ fileId, position: 15, playbackRate: 2 }]
+        );
+
+        presence = await PresenceCollection.findOneAsync({ fileId, userId });
+        assert.strictEqual(presence.playbackRate, 2);
       });
 
       it("persists updating and clearing followingUserId", async function () {

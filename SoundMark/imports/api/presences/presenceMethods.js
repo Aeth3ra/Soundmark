@@ -18,7 +18,13 @@ Meteor.methods({
    * Upserts the calling guest's live position for a given file/workspace.
    * userId/name come from the authenticated session
    */
-  async "presence.update"({ fileId, position, isPlaying, followingUserId }) {
+  async "presence.update"({
+    fileId,
+    position,
+    isPlaying,
+    followingUserId,
+    playbackRate
+  }) {
     if (!this.userId) {
       throw new Meteor.Error("not-authorized", "Must be logged in.");
     }
@@ -27,6 +33,7 @@ Meteor.methods({
     check(position, Number);
     check(isPlaying, Match.Optional(Boolean));
     check(followingUserId, Match.Maybe(Match.OneOf(String, null)));
+    check(playbackRate, Match.Optional(Number));
 
     const user = await Meteor.users.findOneAsync(this.userId);
     const name = user?.profile?.name || "Guest";
@@ -54,7 +61,8 @@ Meteor.methods({
           position,
           isPlaying: Boolean(isPlaying),
           followingUserId: followingUserId || null,
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          playbackRate: typeof playbackRate === "number" ? playbackRate : 1
         }
       }
     );

@@ -11,6 +11,7 @@ export function usePresence({
   identity,
   position,
   isPlaying = false,
+  playbackRate = 1,
   followingUserId = null
 }) {
   const isLoading = useSubscribe("presence.forFile", fileId);
@@ -18,11 +19,13 @@ export function usePresence({
   // Use refs so the interval can read the latest values without restarting
   const positionRef = useRef(position);
   const isPlayingRef = useRef(isPlaying);
+  const playbackRateRef = useRef(playbackRate);
   const followingUserIdRef = useRef(followingUserId);
 
   const lastSentRef = useRef(0);
   const lastPositionRef = useRef(-1);
   const lastIsPlayingRef = useRef(isPlaying);
+  const lastPlaybackRateRef = useRef(playbackRate);
   const lastFollowingUserIdRef = useRef(followingUserId);
 
   // Keep ref up to date without triggering useEffects
@@ -33,6 +36,10 @@ export function usePresence({
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  useEffect(() => {
+    playbackRateRef.current = playbackRate;
+  }, [playbackRate]);
 
   useEffect(() => {
     followingUserIdRef.current = followingUserId;
@@ -59,6 +66,7 @@ export function usePresence({
       const now = Date.now();
       lastSentRef.current = now;
       lastPositionRef.current = positionRef.current;
+      lastPlaybackRateRef.current = playbackRateRef.current;
       lastIsPlayingRef.current = isPlayingRef.current;
       lastFollowingUserIdRef.current = followingUserIdRef.current;
 
@@ -66,6 +74,7 @@ export function usePresence({
         fileId,
         position: positionRef.current,
         isPlaying: isPlayingRef.current,
+        playbackRate: playbackRateRef.current,
         followingUserId: followingUserIdRef.current
       }).catch(() => {});
     };
@@ -76,11 +85,14 @@ export function usePresence({
     const intervalId = setInterval(() => {
       const currentPos = positionRef.current;
       const currentIsPlaying = isPlayingRef.current;
+      const currentPlaybackRate = playbackRateRef.current;
       const currentFollowingId = followingUserIdRef.current;
       const now = Date.now();
 
       const posChanged = currentPos !== lastPositionRef.current;
       const playStateChanged = currentIsPlaying !== lastIsPlayingRef.current;
+      const playbackRateChanged =
+        currentPlaybackRate !== lastPlaybackRateRef.current;
       const followTargetChanged =
         currentFollowingId !== lastFollowingUserIdRef.current;
       const timeSinceLastPing = now - lastSentRef.current;
@@ -89,6 +101,7 @@ export function usePresence({
       if (
         followTargetChanged ||
         playStateChanged ||
+        playbackRateChanged ||
         (posChanged && timeSinceLastPing >= 250) ||
         timeSinceLastPing >= 5000
       ) {

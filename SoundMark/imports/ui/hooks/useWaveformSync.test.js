@@ -10,18 +10,23 @@ if (Meteor.isClient) {
     let playSpy;
     let pauseSpy;
     let setFollowingUserIdSpy;
+    let setPlaybackRateSpy;
+    let clock;
 
     const currentUserId = "user-me";
     const duration = 100; // 100 seconds for easy progress calculation
 
     beforeEach(function () {
+      clock = sinon.useFakeTimers();
       seekToSpy = sinon.spy();
       playSpy = sinon.spy();
       pauseSpy = sinon.spy();
       setFollowingUserIdSpy = sinon.spy();
+      setPlaybackRateSpy = sinon.spy();
     });
 
     afterEach(function () {
+      clock.restore();
       sinon.restore();
     });
 
@@ -38,10 +43,13 @@ if (Meteor.isClient) {
           followingUserId: "user-2",
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: false
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
 
@@ -65,10 +73,13 @@ if (Meteor.isClient) {
           followingUserId: null,
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: false
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
 
@@ -95,10 +106,13 @@ if (Meteor.isClient) {
           followingUserId: null,
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: false
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
 
@@ -120,10 +134,13 @@ if (Meteor.isClient) {
           followingUserId: "user-1",
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: false
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
 
@@ -147,10 +164,13 @@ if (Meteor.isClient) {
           followingUserId: "user-1",
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: false
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
 
@@ -185,17 +205,57 @@ if (Meteor.isClient) {
           followingUserId: "user-1",
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: false
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
 
       // position 50 / duration 100 = 0.5
       assert.isTrue(seekToSpy.calledWith(0.5));
+
+      // Advance clock past polling interval (300ms) to trigger play state sync
+      act(() => {
+        clock.tick(300);
+      });
+
       assert.isTrue(playSpy.calledOnce);
       assert.isFalse(pauseSpy.called);
+    });
+
+    it("syncs playback rate when target has a different playback rate", function () {
+      const otherUsers = [
+        {
+          userId: "user-1",
+          name: "Alice",
+          position: 10,
+          isPlaying: true,
+          playbackRate: 1.5
+        }
+      ];
+
+      renderHook(() =>
+        useWaveformSync({
+          duration,
+          otherUsers,
+          followingUserId: "user-1",
+          setFollowingUserId: setFollowingUserIdSpy,
+          currentUserId,
+          currentTime: 0,
+          seekTo: seekToSpy,
+          play: playSpy,
+          pause: pauseSpy,
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
+        })
+      );
+
+      assert.isTrue(setPlaybackRateSpy.calledWith(1.5));
     });
 
     it("syncs pause state when target user pauses", function () {
@@ -210,12 +270,20 @@ if (Meteor.isClient) {
           followingUserId: "user-1",
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: true
+          isPlaying: true,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
+
+      // Advance clock past polling interval (300ms) to trigger pause state sync
+      act(() => {
+        clock.tick(300);
+      });
 
       assert.isTrue(pauseSpy.calledOnce);
       assert.isFalse(playSpy.called);
@@ -233,10 +301,13 @@ if (Meteor.isClient) {
           followingUserId: null,
           setFollowingUserId: setFollowingUserIdSpy,
           currentUserId,
+          currentTime: 0,
           seekTo: seekToSpy,
           play: playSpy,
           pause: pauseSpy,
-          isPlaying: false
+          isPlaying: false,
+          playbackRate: 1,
+          setPlaybackRate: setPlaybackRateSpy
         })
       );
 
