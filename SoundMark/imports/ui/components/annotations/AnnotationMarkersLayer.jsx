@@ -7,16 +7,19 @@ import { AnnotationMarker } from "./AnnotationMarker";
  * createPortal.
  */
 export const AnnotationMarkersLayer = ({ markerSlots, tooltipRef }) => {
-  return markerSlots.map(({ id, slotElement, annotation, isTimestamp }) => {
-    if (!slotElement) return null;
-    return createPortal(
-      <AnnotationMarker
-        annotation={annotation}
-        isTimestamp={isTimestamp}
-        tooltipRef={tooltipRef}
-      />,
-      slotElement,
-      id
-    );
-  });
+  return markerSlots.map(
+    ({ id, slotElement, annotation, isTimestamp, region }) => {
+      if (!slotElement) return null;
+      return createPortal(
+        <AnnotationMarker
+          annotation={annotation}
+          isTimestamp={isTimestamp}
+          tooltipRef={tooltipRef}
+          region={region}
+        />,
+        slotElement,
+        id
+      );
+    }
+  );
 };

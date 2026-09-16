@@ -17,7 +17,8 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
         id,
         slotElement: waveRegion.element, // the empty box wavesurfer created
         annotation: waveRegion.__annotation,
-        isTimestamp: waveRegion.__isTimestamp
+        isTimestamp: waveRegion.__isTimestamp,
+        region: waveRegion
       });
     });
     setMarkerSlots(slots);
