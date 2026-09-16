@@ -3,12 +3,14 @@ import { check } from "meteor/check";
 import { AnnotationsCollection } from "./annotationsCollection";
 import { publishComposite } from "meteor/reywood:publish-composite";
 
-Meteor.publish("annotations.forFile", (fileId) => {
+Meteor.publish("annotations.forFile", function (fileId) {
   check(fileId, String);
 
-  const result = AnnotationsCollection.find({ fileId });
+  if (!this.userId) {
+    return this.ready();
+  }
 
-  return result;
+  return AnnotationsCollection.find({ fileId });
 });
 
 /**

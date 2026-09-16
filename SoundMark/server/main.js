@@ -12,6 +12,8 @@ import "/imports/api/users/userMethods";
 import "/imports/api/presences/presenceMethods";
 import "/imports/api/presences/presencePublications";
 import "/imports/api/sessions/sessionPublications";
+import "/imports/api/effects/effectsMethods";
+import "/imports/api/effects/effectsPublications";
 
 Meteor.startup(async () => {});
 

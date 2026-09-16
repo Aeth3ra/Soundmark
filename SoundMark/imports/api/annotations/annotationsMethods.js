@@ -3,6 +3,41 @@ import { check, Match } from "meteor/check";
 import { AnnotationsCollection } from "./annotationsCollection";
 import { AudioCollection } from "../audio/audioCollection";
 
+// Validation for creating and updating annotations
+function validateAnnotation({ start, end }, durationSeconds) {
+  if (!Number.isFinite(start) || start < 0) {
+    throw new Meteor.Error(
+      "invalid-time",
+      "Annotation start must be a finite non-negative number."
+    );
+  }
+
+  if (end !== null) {
+    if (!Number.isFinite(end) || end <= start) {
+      throw new Meteor.Error(
+        "invalid-time",
+        "Annotation end must be after its start."
+      );
+    }
+  }
+
+  if (Number.isFinite(durationSeconds)) {
+    if (start > durationSeconds) {
+      throw new Meteor.Error(
+        "invalid-time",
+        "The annotation starts after the audio ends."
+      );
+    }
+
+    if (end !== null && end > durationSeconds) {
+      throw new Meteor.Error(
+        "invalid-time",
+        "The annotation ends after the audio."
+      );
+    }
+  }
+}
+
 Meteor.methods({
   /**
    * Method to create an annotation for an audio file
@@ -37,6 +72,11 @@ Meteor.methods({
         "The audio file does not exist."
       );
     }
+
+    validateAnnotation(
+      { start, end },
+      audioFile.durationSeconds
+    );
 
     // Insert into Mongo. createdBy is always this.userId (the calling user's
     // account, guest or otherwise) — never trust a client-supplied id.
@@ -79,6 +119,11 @@ Meteor.methods({
         "The annotation does not exist."
         );
     }
+
+    validateAnnotation(
+      { start, end },
+      audioFile.durationSeconds
+    );
 
     await AnnotationsCollection.updateAsync(annotationId, {
         $set: {
