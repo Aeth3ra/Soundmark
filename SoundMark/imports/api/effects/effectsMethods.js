@@ -38,45 +38,6 @@ function validateEffect(
       "Effect order must be a non-negative integer."
     );
   }
-
-  if (type === "normalize") {
-    check(params, {
-      mode: String,
-      targetDbFS: Number
-    });
-
-    if (
-      params.mode !== "peak" ||
-      !Number.isFinite(params.targetDbFS) ||
-      params.targetDbFS < -60 ||
-      params.targetDbFS > 0
-    ) {
-      throw new Meteor.Error(
-        "invalid-params",
-        "Use peak normalisation with a target between -60 and 0 dBFS."
-      );
-    }
-  } else if (type === "pitchShift") {
-    check(params, {
-      semitones: Number
-    });
-
-    if (
-      !Number.isFinite(params.semitones) ||
-      params.semitones < -24 ||
-      params.semitones > 24
-    ) {
-      throw new Meteor.Error(
-        "invalid-params",
-        "Pitch shift must be between -24 and 24 semitones."
-      );
-    }
-  } else {
-    throw new Meteor.Error(
-      "invalid-effect",
-      "Unsupported effect type."
-    );
-  }
 }
 
 Meteor.methods({
