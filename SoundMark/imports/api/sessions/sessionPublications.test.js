@@ -10,8 +10,14 @@ if (Meteor.isServer) {
     const otherFileId = "file-2";
     const hostId = "host-user-1";
 
+    let userId;
+
     beforeEach(async function () {
       await SessionsCollection.removeAsync({});
+
+      userId = await Meteor.users.insertAsync({
+      profile: { name: "Test User" }
+      });
     });
 
     describe("sessions.forFile", function () {
@@ -27,7 +33,7 @@ if (Meteor.isServer) {
           createdAt: new Date()
         });
 
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect("sessions.forFile", fileId);
 
         assert.equal(collections.sessions.length, 1);
@@ -36,7 +42,7 @@ if (Meteor.isServer) {
       });
 
       it("publishes an empty array (not undefined) when there's nothing to find", async function () {
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect("sessions.forFile", fileId);
 
         assert.deepEqual(collections.sessions, []);

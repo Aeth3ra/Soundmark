@@ -9,9 +9,15 @@ if (Meteor.isServer) {
     const fileId = "file-1";
     const otherFileId = "file-2";
 
+    let userId;
+
     beforeEach(async function () {
-      await AnnotationsCollection.removeAsync({});
-      await Meteor.users.removeAsync({});
+        await AnnotationsCollection.removeAsync({});
+        await Meteor.users.removeAsync({});
+
+        userId = await Meteor.users.insertAsync({
+        profile: { name: "Test User" }
+        });
     });
 
     describe("annotations.forFile", function () {
@@ -22,7 +28,7 @@ if (Meteor.isServer) {
           title: "b"
         });
 
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         // collect() resolves once the publish function calls this.ready()
         const collections = await collector.collect(
           "annotations.forFile",
@@ -34,7 +40,7 @@ if (Meteor.isServer) {
       });
 
       it("publishes an empty array (not undefined) when there's nothing to find", async function () {
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect(
           "annotations.forFile",
           fileId
@@ -60,7 +66,7 @@ if (Meteor.isServer) {
         await AnnotationsCollection.insertAsync({ fileId, createdBy: alice });
         await AnnotationsCollection.insertAsync({ fileId, createdBy: bob });
 
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect(
           "annotations.authorsForFile",
           fileId
@@ -77,7 +83,7 @@ if (Meteor.isServer) {
         });
         await AnnotationsCollection.insertAsync({ fileId, createdBy: alice });
 
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect(
           "annotations.authorsForFile",
           fileId
@@ -92,8 +98,7 @@ if (Meteor.isServer) {
           fileId: otherFileId,
           createdBy: alice
         });
-
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect(
           "annotations.authorsForFile",
           fileId
