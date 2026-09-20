@@ -6,11 +6,11 @@ import { exportRegion } from "../services/audioService";
  * Lives alongside "Create annotation" / "Clear region" in the region
  * actions row for now, until that row gets promoted to a proper menu.
  */
-export const RegionExportButton = ({ fileId, activeRegion }) => {
+export const RegionExportButton = ({ fileId, activeRegion, effects = [], isEffectsLoading = false }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
-    if (isExporting || !activeRegion) return;
+    if (isExporting || !activeRegion || isEffectsLoading) return;
 
     setIsExporting(true);
 
@@ -18,11 +18,12 @@ export const RegionExportButton = ({ fileId, activeRegion }) => {
       await exportRegion({
         fileId,
         start: activeRegion.start,
-        end: activeRegion.end
+        end: activeRegion.end,
+        effects
       });
     } catch (error) {
       console.error("Region export failed:", error);
-      window.alert("Could not export the selected region.");
+      window.alert(error.reason || error.message || "Could not export the selected region.");
     } finally {
       setIsExporting(false);
     }
@@ -32,7 +33,7 @@ export const RegionExportButton = ({ fileId, activeRegion }) => {
     <button
       type="button"
       className="btn btn-sm btn-outline gap-2"
-      disabled={!activeRegion || isExporting}
+      disabled={!activeRegion || isExporting || isEffectsLoading}
       onClick={handleExport}
     >
       {isExporting ? "Exporting…" : "Export selection"}

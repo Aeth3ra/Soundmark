@@ -85,33 +85,40 @@ const decodeAudioFile = async (arrayBuffer) => {
   const context = new AudioContextClass();
 
   try {
-    // decodeAudioData reads the file's actual sample rate/bit depth - this
-    // is deliberately independent of wavesurfer's own decoded data, which
-    // is decoded at a fixed 8kHz by default (fine for drawing peaks, far
-    // too lossy for an exported file).
+    // Decode the source file independently of the waveform preview.
+    // decodeAudioData produces floating-point samples at this context's rate.
     return await context.decodeAudioData(arrayBuffer);
   } finally {
-    context.close();
+    await context.close();
   }
 };
+
+/** Decode the source once for a player's preview session. */
+export async function loadAudioBuffer(url, signal) {
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error("Could not load the audio for playback.");
+  const buffer = await decodeAudioFile(await response.arrayBuffer());
+  if (signal?.aborted) throw new DOMException("Audio load cancelled.", "AbortError");
+  return buffer;
+}
+
+/** Use the same renderer as selection export, always starting from the source. */
+export async function createPreviewBlob(sourceBuffer, effects) {
+  const processed = await applyEffectsChain(sourceBuffer, effects);
+  return encodeWavBlob(processed);
+}
 
 /**
  * Exports the currently selected timeline region as a standalone WAV file.
  *
- * Fetches and decodes the original audio file itself at full quality,
- * rather than reusing wavesurferInstance.getDecodedData() - that data is
- * decoded at a fixed low sample rate (8kHz by default) for waveform
- * rendering performance and isn't suitable for an exported file. It then
- * runs the sliced region through applyEffectsChain() before encoding - a
- * no-op today since effects aren't implemented, but the point where a
- * future effects chain plugs in so exported regions keep matching what's
- * audible.
+ * Decodes the source file, applies saved effects on the full timeline,
+ * then crops and encodes the selected region. Player preview is separate.
  *
  * @param {Object} params
  * @param {string} params.fileId
  * @param {number} params.start - region start, seconds
  * @param {number} params.end - region end, seconds
- * @param {Array} [params.effects] - reserved for future effect descriptors
+ * @param {Array} [params.effects] - saved effects for this file
  * @param {string} [params.baseFileName]
  */
 export async function exportRegion({
@@ -121,7 +128,7 @@ export async function exportRegion({
   effects = [],
   baseFileName = "soundmark-selection"
 }) {
-  if (end == null || start == null || end <= start) {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) {
     throw new Error("Select a region before exporting.");
   }
 
@@ -134,9 +141,9 @@ export async function exportRegion({
 
   const decoded = await decodeAudioFile(await response.arrayBuffer());
 
-  const sliced = sliceAudioBuffer(decoded, start, end);
-  const processed = applyEffectsChain(sliced, effects);
-  const blob = encodeWavBlob(processed);
+  const processed = await applyEffectsChain(decoded, effects);
+  const sliced = sliceAudioBuffer(processed, start, end);
+  const blob = encodeWavBlob(sliced);
 
   const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");

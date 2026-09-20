@@ -1,15 +1,14 @@
 /**
- * Pure, framework-free helpers for turning a decoded AudioBuffer region
- * into a downloadable WAV file. Kept separate from audioService.js so
- * they're easy to unit test without stubbing Meteor/fetch/DOM.
+ * AudioBuffer processing and WAV encoding helpers. Network requests and
+ * downloads stay in audioService.js. Rendering uses the Web Audio API.
  */
+import { measureAudioBuffer } from "./audioAnalysis";
 
 /**
  * Copies the [startSeconds, endSeconds) range out of a decoded AudioBuffer
  * into a new, standalone AudioBuffer.
  *
- * @param {AudioBuffer} audioBuffer - full decoded track, e.g. from
- *   wavesurferInstance.getDecodedData()
+ * @param {AudioBuffer} audioBuffer - full decoded track from the source file
  * @param {number} startSeconds
  * @param {number} endSeconds
  * @returns {AudioBuffer} a new buffer containing just the selected region
@@ -45,34 +44,108 @@ export function sliceAudioBuffer(audioBuffer, startSeconds, endSeconds) {
   return sliced;
 }
 
-/**
- * Extension point for the not-yet-built effects pipeline.
- *
- * Effects (gain, EQ, reverb, etc., presumably via Tone.js given it's
- * already a dependency) don't exist yet in Soundmark. Once they do, each
- * effect the user has applied to the track should be describable as a
- * descriptor here, and this function should render the sliced region
- * through the same chain that's currently audible in the player - that's
- * what "preserve applied effects" means for export. Wiring that up will
- * probably mean rendering `audioBuffer` through an OfflineAudioContext (or
- * Tone.Offline) with each effect's node inserted in order, then returning
- * the rendered buffer.
- *
- * For now there's nothing to apply, so this is an identity passthrough -
- * callers can start threading an `effects` array through today and it'll
- * start doing something the moment effects processing lands.
- *
- * @param {AudioBuffer} audioBuffer
- * @param {Array} effects - reserved for future effect descriptors
- * @returns {AudioBuffer}
- */
-export function applyEffectsChain(audioBuffer, effects = []) {
-  if (effects.length > 0) {
-    console.warn(
-      "Audio effects are not implemented yet; exporting the selection without them applied."
-    );
+// Render one region through a GainNode, preserving its channel layout.
+async function renderGain(audioBuffer, gain) {
+  const OfflineContext = globalThis.OfflineAudioContext ||
+    globalThis.webkitOfflineAudioContext;
+  if (!OfflineContext) {
+    throw new Error("This browser does not support offline audio processing.");
   }
-  return audioBuffer;
+
+  const context = new OfflineContext(
+    audioBuffer.numberOfChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+  const source = context.createBufferSource();
+  const gainNode = context.createGain();
+  source.buffer = audioBuffer;
+  gainNode.channelCount = audioBuffer.numberOfChannels;
+  gainNode.channelCountMode = "explicit";
+  gainNode.channelInterpretation = "discrete";
+  gainNode.gain.setValueAtTime(gain, 0);
+  source.connect(gainNode);
+  gainNode.connect(context.destination);
+  source.start(0);
+
+  try {
+    return await context.startRendering();
+  } finally {
+    source.disconnect();
+    gainNode.disconnect();
+  }
+}
+
+/** Apply saved effects to the full track. The source buffer is never mutated. */
+export async function applyEffectsChain(audioBuffer, effects = []) {
+  if (!Array.isArray(effects)) {
+    throw new Error("Effects must be an array.");
+  }
+  for (const effect of effects) {
+    if (!effect || typeof effect.enabled !== "boolean" ||
+        !Number.isSafeInteger(effect.order) || effect.order < 0) {
+      throw new Error("Invalid effect settings.");
+    }
+  }
+
+  const ordered = effects.filter((effect) => effect.enabled).sort((a, b) => {
+    const order = a.order - b.order;
+    const created = new Date(a.createdAt ?? 0).getTime() -
+      new Date(b.createdAt ?? 0).getTime();
+    const aId = String(a._id ?? "");
+    const bId = String(b._id ?? "");
+    return order || created || (aId < bId ? -1 : aId > bId ? 1 : 0);
+  });
+  if (ordered.length === 0) return audioBuffer;
+
+  // One private working copy; overlapping effects run in the saved order.
+  const output = new AudioBuffer({
+    numberOfChannels: audioBuffer.numberOfChannels,
+    length: audioBuffer.length,
+    sampleRate: audioBuffer.sampleRate
+  });
+  for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+    output.getChannelData(channel).set(audioBuffer.getChannelData(channel));
+  }
+
+  for (const effect of ordered) {
+    if (effect.type !== "normalize") {
+      throw new Error(`Rendering ${effect.type} effects is not implemented yet.`);
+    }
+    const { start, end, params } = effect;
+    if (!Number.isFinite(start) || !Number.isFinite(end) ||
+        start < 0 || end <= start || end > output.duration) {
+      throw new Error("An effect is outside the audio duration.");
+    }
+    if (!params || params.mode !== "rms" ||
+        !Number.isFinite(params.targetRms) ||
+        params.targetRms <= 0 || params.targetRms > 1) {
+      throw new Error("Invalid normalisation settings. Recreate this effect with a target RMS greater than 0 and at most 1.");
+    }
+
+    const region = sliceAudioBuffer(output, start, end);
+    const { rms, peak } = measureAudioBuffer(region);
+    if (rms === 0) continue; // Gain cannot turn silence into sound.
+
+    const gain = params.targetRms / rms;
+    if (!Number.isFinite(Math.fround(gain))) {
+      throw new Error("This region is too quiet to normalise with a GainNode.");
+    }
+    if (peak * gain > 1 + 1e-6) {
+      const maximumRms = rms / peak;
+      throw new Error(
+        `This target would clip. Choose a target RMS of ${maximumRms} or lower.`
+      );
+    }
+
+    const rendered = await renderGain(region, gain);
+    const startSample = Math.floor(start * output.sampleRate);
+    for (let channel = 0; channel < output.numberOfChannels; channel++) {
+      output.getChannelData(channel).set(rendered.getChannelData(channel), startSample);
+    }
+  }
+
+  return output;
 }
 
 const writeString = (view, offset, string) => {

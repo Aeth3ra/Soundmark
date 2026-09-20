@@ -1,5 +1,57 @@
 import Meyda from "meyda";
 
+// Measure every sample across all channels, without mixing channels to mono.
+export function measureAudioBuffer(audioBuffer) {
+  if (!audioBuffer?.length || !audioBuffer.numberOfChannels) {
+    throw new Error("Audio buffer is empty.");
+  }
+
+  const frameSize = 2048;
+  // Meyda.extract uses settings on `this`. Keep this measurement's settings
+  // and derived filter banks separate from the existing key analysis.
+  const analyser = {
+    ...Meyda,
+    bufferSize: frameSize,
+    sampleRate: audioBuffer.sampleRate,
+    windowingFunction: "rect",
+    barkScale: undefined,
+    melFilterBank: undefined,
+    chromaFilterBank: undefined
+  };
+  const frame = new Float32Array(frameSize);
+  let energy = 0;
+  let peak = 0;
+
+  for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+    const samples = audioBuffer.getChannelData(channel);
+
+    for (let offset = 0; offset < samples.length; offset += frameSize) {
+      const count = Math.min(frameSize, samples.length - offset);
+      frame.fill(0);
+      frame.set(samples.subarray(offset, offset + count));
+
+      for (let index = 0; index < count; index++) {
+        if (!Number.isFinite(frame[index])) {
+          throw new Error("Audio contains an invalid sample.");
+        }
+        peak = Math.max(peak, Math.abs(frame[index]));
+      }
+
+      const rms = analyser.extract("rms", frame);
+      if (!Number.isFinite(rms)) {
+        throw new Error("Could not measure the audio RMS.");
+      }
+
+      // Recover this frame's energy. Zero padding adds no energy.
+      energy += rms * rms * frameSize;
+    }
+  }
+
+  // Count only real samples, including every channel.
+  const sampleCount = audioBuffer.length * audioBuffer.numberOfChannels;
+  return { rms: Math.sqrt(energy / sampleCount), peak };
+}
+
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
 const MINOR_PROFILE = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];

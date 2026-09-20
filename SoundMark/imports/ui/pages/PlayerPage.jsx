@@ -4,9 +4,12 @@ import { AudioExportButton } from "../components/AudioExportButton";
 import { RegionExportButton } from "../components/RegionExportButton";
 import { ProjectPackageExportButton } from "../components/ProjectPackageExportButton";
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
+import { EffectForm } from "../components/effects/EffectForm";
+import { EffectList } from "../components/effects/EffectList";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
 import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
+import { EffectsCollection } from "../../api/effects/effectsCollection";
 import { useAnnotationRender } from "../hooks/useAnnotationRender";
 import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
@@ -38,14 +41,23 @@ export const PlayerPage = () => {
   const navigate = useNavigate();
 
   const [copied, setCopied] = useState(null);
-  const [audioUrl, setAudioUrl] = useState(null);
+  const [audioSource, setAudioSource] = useState(null);
+  const audioUrl = audioSource?.fileId === fileId ? audioSource.url : null;
   const [audioMissing, setAudioMissing] = useState(false);
   const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
+  const [isEffectsListOpen, setIsEffectsListOpen] = useState(false);
+  const [effectRegion, setEffectRegion] = useState(null);
   const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
   const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
   const [selectedTags, setSelectedTags] = useState([]);
   const [editingAnnotation, setEditingAnnotation] = useState(null);
   const [followingUserId, setFollowingUserId] = useState(null);
+
+  // A form opened for one file must not carry over to another file.
+  useEffect(() => {
+    setEffectRegion(null);
+    setIsEffectsListOpen(false);
+  }, [fileId]);
 
   // Tags currently used to filter the annotation list
   const toggleTagFilter = (tag) => {
@@ -87,6 +99,8 @@ export const PlayerPage = () => {
 
   // Load Audio
   useEffect(() => {
+    let cancelled = false;
+    setAudioMissing(false);
     async function loadAudio() {
       if (!fileId) {
         navigate("/");
@@ -95,14 +109,28 @@ export const PlayerPage = () => {
 
       try {
         const url = await getPlayableUrl(fileId);
-        setAudioUrl(url);
+        if (!cancelled) setAudioSource({ fileId, url });
       } catch (err) {
-        setAudioMissing(true);
+        if (!cancelled) setAudioMissing(true);
       }
     }
 
     loadAudio();
+    return () => { cancelled = true; };
   }, [fileId, navigate]);
+
+  // Effects must be available before preparing the playback preview.
+  const isEffectsLoading = useSubscribe("effects.forFile", fileId);
+  const effects = useTracker(() => {
+    return EffectsCollection.find(
+      { fileId },
+      { sort: { order: 1, createdAt: 1, _id: 1 } }
+    ).fetch();
+  }, [fileId]);
+  const nextEffectOrder = effects.reduce(
+    (next, effect) => Math.max(next, effect.order + 1),
+    0
+  );
 
   // Load wavesurfer
   const {
@@ -121,13 +149,18 @@ export const PlayerPage = () => {
     setZoom,
     setPlaybackRate,
     toggleLoop,
-    wavesurferInstance
-  } = useWavesurfer(audioUrl);
+    wavesurferInstance,
+    isProcessing,
+    isAudioReady,
+    audioError,
+    audioVersion,
+    retryAudio
+  } = useWavesurfer(audioUrl, effects, !isEffectsLoading());
 
   // Load regions plugin for wavesurfer
   const regionsPlugin = useRegionsPlugin(wavesurferInstance);
   const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
-  const regionAnalysis = useRegionAnalysis(wavesurferInstance, activeRegion);
+  const regionAnalysis = useRegionAnalysis(wavesurferInstance, activeRegion, audioVersion);
 
   useZoomPlugin(wavesurferInstance);
 
@@ -142,7 +175,8 @@ export const PlayerPage = () => {
   const annotationAnalyses = useAnnotationAnalysis(
     wavesurferInstance,
     annotations,
-    isAnnotateListOpen
+    isAnnotateListOpen,
+    audioVersion
   );
 
   // Subscribes to the display names of everyone who has authored an
@@ -197,8 +231,7 @@ export const PlayerPage = () => {
 
   // Seeks the waveform to a given time (seconds) when an annotation is clicked
   const handleSeekToAnnotation = (seconds) => {
-    if (!wavesurferInstance) return;
-    wavesurferInstance.setTime(seconds);
+    if (duration > 0) seekTo(seconds / duration);
   };
 
   // Session is over screen
@@ -287,9 +320,24 @@ export const PlayerPage = () => {
             </div>
           ) : (
             <>
+              {isProcessing && (
+                <p role="status" className="px-6 py-2 text-sm text-base-content/60">
+                  Updating audio preview…
+                </p>
+              )}
+              {audioError && (
+                <div role="alert" className="alert alert-error mx-6 my-2">
+                  <span>{audioError}</span>
+                  <button type="button" onClick={retryAudio} className="btn btn-sm">
+                    Retry
+                  </button>
+                </div>
+              )}
               {/* Toolbar  */}
               <div className="flex items-center gap-6 px-6 py-3 border-b border-base-300 bg-base-100">
                 <PlayerControls
+                  key={fileId}
+                  disabled={!isAudioReady}
                   isPlaying={isPlaying}
                   isLooping={isLooping}
                   playbackRate={playbackRate}
@@ -315,7 +363,10 @@ export const PlayerPage = () => {
                 />
 
                 <button
-                  onClick={() => setIsAnnotateListOpen((open) => !open)}
+                  onClick={() => {
+                    setIsAnnotateListOpen((open) => !open);
+                    setIsEffectsListOpen(false);
+                  }}
                   className={`btn btn-sm gap-2 ${isAnnotateListOpen ? "btn-primary" : "btn-outline"}`}
                 >
                   <ListMusic className="h-4 w-4" />
@@ -324,10 +375,24 @@ export const PlayerPage = () => {
                     <span className="badge badge-sm">{annotations.length}</span>
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEffectsListOpen((open) => !open);
+                    setIsAnnotateListOpen(false);
+                  }}
+                  className={`btn btn-sm gap-2 ${isEffectsListOpen ? "btn-primary" : "btn-outline"}`}
+                >
+                  Effects
+                  {effects.length > 0 && (
+                    <span className="badge badge-sm">{effects.length}</span>
+                  )}
+                </button>
               </div>
 
               {/* Waveform  */}
-              <div className="flex-1 px-6 py-6">
+              <div aria-busy={isProcessing} className={`flex-1 px-6 py-6 ${!isAudioReady ? "pointer-events-none" : ""}`}>
                 <div className="bg-base-100 rounded-box shadow-xl p-6 flex flex-col">
                   <div className="bg-base-200/40 rounded-box flex-1 p-4">
                     <WaveformDisplay
@@ -352,6 +417,7 @@ export const PlayerPage = () => {
               <div className="flex items-center gap-2 self-start ml-6 mb-4">
                 <button
                   onClick={() => {
+                    setEffectRegion(null);
                     setEditingAnnotation(null);
                     openAnnotation(
                       activeRegion
@@ -371,6 +437,23 @@ export const PlayerPage = () => {
                 </button>
 
                 <button
+                  type="button"
+                  disabled={!activeRegion || !userId || duration <= 0 || isEffectsLoading() || !isAudioReady || Boolean(effectRegion)}
+                  onClick={() => {
+                    if (!activeRegion) return;
+                    closeAnnotation();
+                    setEditingAnnotation(null);
+                    // Copy the times so changes to the selection do not move this form's target.
+                    setEffectRegion({ fileId, start: activeRegion.start, end: activeRegion.end });
+                    setIsEffectsListOpen(true);
+                    setIsAnnotateListOpen(false);
+                  }}
+                  className="btn btn-sm btn-outline"
+                >
+                  Apply effect
+                </button>
+
+                <button
                   onClick={clearRegion}
                   disabled={!activeRegion}
                   className="btn btn-sm btn-outline gap-2"
@@ -381,6 +464,8 @@ export const PlayerPage = () => {
                 <RegionExportButton
                   fileId={fileId}
                   activeRegion={activeRegion}
+                  effects={effects}
+                  isEffectsLoading={isEffectsLoading()}
                 />
               </div>
             </>
@@ -399,10 +484,33 @@ export const PlayerPage = () => {
           hiddenIds={hiddenAnnotationIds}
           onToggleHidden={toggleAnnotationHidden}
           userNames={userNames}
-          onEdit={setEditingAnnotation}
+          onEdit={(annotation) => {
+            setEffectRegion(null);
+            setEditingAnnotation(annotation);
+          }}
           analyses={annotationAnalyses}
         />
+
+        <EffectList
+          effects={effects}
+          isOpen={isEffectsListOpen}
+          isLoading={isEffectsLoading()}
+          onClose={() => setIsEffectsListOpen(false)}
+          onSeek={handleSeekToAnnotation}
+          userId={userId}
+          isHost={isHost}
+        />
       </div>
+
+      {effectRegion?.fileId === fileId && (
+        <EffectForm
+          fileId={fileId}
+          region={effectRegion}
+          duration={duration}
+          order={nextEffectOrder}
+          onClose={() => setEffectRegion(null)}
+        />
+      )}
 
       {/* Annotation form - only appears if triggered or editing */}
       <AnnotationForm
