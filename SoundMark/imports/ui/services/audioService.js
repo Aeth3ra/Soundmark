@@ -85,8 +85,8 @@ const decodeAudioFile = async (arrayBuffer) => {
   const context = new AudioContextClass();
 
   try {
-    // Decode the source file independently of the waveform preview.
-    // decodeAudioData produces floating-point samples at this context's rate.
+    // Decode the source file independently of the waveform preview
+    // decodeAudioData produces floating-point samples at this context's rate
     return await context.decodeAudioData(arrayBuffer);
   } finally {
     await context.close();
@@ -102,17 +102,17 @@ export async function loadAudioBuffer(url, signal) {
   return buffer;
 }
 
-/** Use the same renderer as selection export, always starting from the source. */
+/** Use the same renderer as selection export, always starting from the source */
 export async function createPreviewBlob(sourceBuffer, effects) {
   const processed = await applyEffectsChain(sourceBuffer, effects);
   return encodeWavBlob(processed);
 }
 
 /**
- * Exports the currently selected timeline region as a standalone WAV file.
+ * Exports the currently selected timeline region as a standalone WAV file
  *
  * Decodes the source file, applies saved effects on the full timeline,
- * then crops and encodes the selected region. Player preview is separate.
+ * then crops and encodes the selected region. Player preview is separate
  *
  * @param {Object} params
  * @param {string} params.fileId

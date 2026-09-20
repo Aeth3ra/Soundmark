@@ -8,7 +8,7 @@ const initialPlayer = () => ({
   isProcessing: false, audioError: null, audioVersion: 0
 });
 
-// Also stop waiting if a media error occurs or this player is disposed.
+// Also stop waiting if a media error occurs or this player is disposed
 async function loadPreview(wavesurfer, blob, signal) {
   let unsubscribe;
   let onAbort;
@@ -31,7 +31,7 @@ export const useWavesurfer = (url, effects = [], effectsReady = true) => {
   const sessionRef = useRef(null);
   const [player, setPlayer] = useState(initialPlayer);
   const [retry, setRetry] = useState(0);
-  // React renders during playback; only changed effect data starts a new render.
+  // React renders during playback; only changed effect data starts a new render
   const effectsKey = JSON.stringify(effects);
   const updatePlayer = useCallback((patch) => {
     setPlayer((current) => ({ ...current, ...patch }));
@@ -52,7 +52,7 @@ export const useWavesurfer = (url, effects = [], effectsReady = true) => {
     }
   }, [updatePlayer]);
 
-  // One WaveSurfer instance for each source URL, shared by all effect previews.
+  // One WaveSurfer instance for each source URL, shared by all effect previews
   useEffect(() => {
     setPlayer(initialPlayer());
     if (!url || !containerRef.current) return;
@@ -99,7 +99,7 @@ export const useWavesurfer = (url, effects = [], effectsReady = true) => {
       updatePlayer({ zoom: value });
     });
     wavesurfer.on("error", (error) => {
-      // Errors while loading are handled by the current preview request.
+      // Errors while loading are handled by the current preview request
       if (session.closed || session.updating) return;
       session.failed = true;
       session.ready = false;
@@ -113,7 +113,7 @@ export const useWavesurfer = (url, effects = [], effectsReady = true) => {
       session.version++;
       session.controller.abort();
       session.sourcePromise = null;
-      wavesurfer.destroy(); // Also releases the Blob URL owned by WaveSurfer.
+      wavesurfer.destroy(); // Also releases the Blob URL owned by WaveSurfer
       if (sessionRef.current === session) sessionRef.current = null;
     };
   }, [url, updatePlayer]);
@@ -128,13 +128,12 @@ export const useWavesurfer = (url, effects = [], effectsReady = true) => {
     session.updating = true;
     session.ready = false;
     session.failed = false;
-    session.wavesurfer.pause(); // Keep wantPlay and position for restoration.
+    session.wavesurfer.pause(); // Keep wantPlay and position for restoration
     session.wavesurfer.toggleInteraction(false);
     updatePlayer({ isProcessing: true, isPlaying: false, audioError: null });
 
     if (effectsReady) {
       const snapshot = JSON.parse(effectsKey);
-      // Serialize loads. Superseded requests exit before replacing the preview.
       session.queue = session.queue.then(async () => {
         if (!isCurrent()) return;
         try {

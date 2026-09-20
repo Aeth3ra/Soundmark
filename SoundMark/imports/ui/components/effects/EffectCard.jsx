@@ -7,11 +7,16 @@ export const EffectCard = ({ effect, onSeek, userId, isHost }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const canEdit = Boolean(userId && (isHost || effect.createdBy === userId));
-  const needsRecreation = effect.type === "normalize" && (
+  const invalidNormalisation = effect.type === "normalize" && (
     effect.params?.mode !== "rms" ||
     !Number.isFinite(effect.params?.targetRms) ||
     effect.params.targetRms <= 0 || effect.params.targetRms > 1
   );
+  const invalidAmplification = effect.type === "amplify" && (
+    !Number.isFinite(effect.params?.gain) ||
+    effect.params.gain < 0 || effect.params.gain > 4
+  );
+  const needsRecreation = invalidNormalisation || invalidAmplification;
 
   const handleToggle = async () => {
     if (!canEdit || busy || needsRecreation) return;
@@ -48,9 +53,25 @@ export const EffectCard = ({ effect, onSeek, userId, isHost }) => {
     }
   };
 
-  const title = effect.type === "normalize"
-    ? (needsRecreation ? "Normalisation: recreate effect" : "RMS normalisation")
-    : "Pitch shift";
+  let title;
+  let details;
+  if (effect.type === "normalize") {
+    title = needsRecreation ? "Normalisation: recreate effect" : "RMS normalisation";
+    details = needsRecreation
+      ? "Older settings: delete this effect and recreate it with a target RMS."
+      : `Target RMS: ${effect.params.targetRms}`;
+  } else if (effect.type === "amplify") {
+    title = "Region amplification";
+    details = needsRecreation
+      ? "Invalid gain: delete this effect and recreate it with a gain between 0 and 4."
+      : `Gain: ${effect.params.gain}×`;
+  } else if (effect.type === "pitchShift") {
+    title = "Pitch shift";
+    details = `${effect.params?.semitones} semitones`;
+  } else {
+    title = "Unknown effect";
+    details = effect.type;
+  }
 
   return (
     <div className="p-3 rounded-box border border-base-300/60 bg-base-100 shadow-sm">
@@ -66,11 +87,7 @@ export const EffectCard = ({ effect, onSeek, userId, isHost }) => {
       </button>
 
       <p className="text-sm text-base-content/60 mt-1">
-        {effect.type === "normalize"
-          ? (needsRecreation
-              ? "Older settings: delete this effect and recreate it with a target RMS."
-              : `Target RMS: ${effect.params.targetRms}`)
-          : `${effect.params.semitones} semitones`}
+        {details}
       </p>
 
       <div className="flex items-center gap-2 mt-3">

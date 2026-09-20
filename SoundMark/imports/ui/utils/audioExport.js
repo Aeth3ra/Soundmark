@@ -1,12 +1,8 @@
-/**
- * AudioBuffer processing and WAV encoding helpers. Network requests and
- * downloads stay in audioService.js. Rendering uses the Web Audio API.
- */
 import { measureAudioBuffer } from "./audioAnalysis";
 
 /**
  * Copies the [startSeconds, endSeconds) range out of a decoded AudioBuffer
- * into a new, standalone AudioBuffer.
+ * into a new, standalone AudioBuffer
  *
  * @param {AudioBuffer} audioBuffer - full decoded track from the source file
  * @param {number} startSeconds
@@ -26,9 +22,6 @@ export function sliceAudioBuffer(audioBuffer, startSeconds, endSeconds) {
     throw new Error("Selected region is empty.");
   }
 
-  // The AudioBuffer constructor lets us build a buffer without needing an
-  // AudioContext instance around (which we'd otherwise have to create and
-  // remember to close).
   const sliced = new AudioBuffer({
     numberOfChannels: audioBuffer.numberOfChannels,
     length: frameCount,
@@ -44,7 +37,7 @@ export function sliceAudioBuffer(audioBuffer, startSeconds, endSeconds) {
   return sliced;
 }
 
-// Render one region through a GainNode, preserving its channel layout.
+// Render one region through a GainNode, preserving its channel layout
 async function renderGain(audioBuffer, gain) {
   const OfflineContext = globalThis.OfflineAudioContext ||
     globalThis.webkitOfflineAudioContext;
@@ -76,7 +69,7 @@ async function renderGain(audioBuffer, gain) {
   }
 }
 
-/** Apply saved effects to the full track. The source buffer is never mutated. */
+/** Apply saved effects to the full track. The source buffer is never mutated */
 export async function applyEffectsChain(audioBuffer, effects = []) {
   if (!Array.isArray(effects)) {
     throw new Error("Effects must be an array.");
@@ -98,7 +91,6 @@ export async function applyEffectsChain(audioBuffer, effects = []) {
   });
   if (ordered.length === 0) return audioBuffer;
 
-  // One private working copy; overlapping effects run in the saved order.
   const output = new AudioBuffer({
     numberOfChannels: audioBuffer.numberOfChannels,
     length: audioBuffer.length,
@@ -109,30 +101,73 @@ export async function applyEffectsChain(audioBuffer, effects = []) {
   }
 
   for (const effect of ordered) {
-    if (effect.type !== "normalize") {
-      throw new Error(`Rendering ${effect.type} effects is not implemented yet.`);
+    if (effect.type !== "normalize" && effect.type !== "amplify") {
+      throw new Error(
+        `Rendering ${effect.type} effects is not implemented yet.`
+      );
     }
+
     const { start, end, params } = effect;
-    if (!Number.isFinite(start) || !Number.isFinite(end) ||
-        start < 0 || end <= start || end > output.duration) {
+
+    if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
+      start < 0 ||
+      end <= start ||
+      end > output.duration
+    ) {
       throw new Error("An effect is outside the audio duration.");
     }
-    if (!params || params.mode !== "rms" ||
+
+    if (effect.type === "normalize") {
+      if (
+        !params ||
+        params.mode !== "rms" ||
         !Number.isFinite(params.targetRms) ||
-        params.targetRms <= 0 || params.targetRms > 1) {
-      throw new Error("Invalid normalisation settings. Recreate this effect with a target RMS greater than 0 and at most 1.");
+        params.targetRms <= 0 ||
+        params.targetRms > 1
+      ) {
+        throw new Error(
+          "Invalid normalisation settings. Recreate this effect " +
+          "with a target RMS greater than 0 and at most 1."
+        );
+      }
+    } else if (
+      !params ||
+      !Number.isFinite(params.gain) ||
+      params.gain < 0 ||
+      params.gain > 4
+    ) {
+      throw new Error(
+        "Invalid amplification settings. Use a gain between 0 and 4."
+      );
     }
 
     const region = sliceAudioBuffer(output, start, end);
     const { rms, peak } = measureAudioBuffer(region);
-    if (rms === 0) continue; // Gain cannot turn silence into sound.
 
-    const gain = params.targetRms / rms;
+    if (rms === 0) continue;
+
+    const gain =
+      effect.type === "normalize"
+        ? params.targetRms / rms
+        : params.gain;
+
     if (!Number.isFinite(Math.fround(gain))) {
-      throw new Error("This region is too quiet to normalise with a GainNode.");
+      throw new Error(
+        "This region is too quiet to normalise with a GainNode."
+      );
     }
+
     if (peak * gain > 1 + 1e-6) {
+      if (effect.type === "amplify") {
+        throw new Error(
+          `This gain would clip. Choose a gain of ${1 / peak}× or lower.`
+        );
+      }
+
       const maximumRms = rms / peak;
+
       throw new Error(
         `This target would clip. Choose a target RMS of ${maximumRms} or lower.`
       );
@@ -140,8 +175,11 @@ export async function applyEffectsChain(audioBuffer, effects = []) {
 
     const rendered = await renderGain(region, gain);
     const startSample = Math.floor(start * output.sampleRate);
+
     for (let channel = 0; channel < output.numberOfChannels; channel++) {
-      output.getChannelData(channel).set(rendered.getChannelData(channel), startSample);
+      output
+        .getChannelData(channel)
+        .set(rendered.getChannelData(channel), startSample);
     }
   }
 
@@ -155,13 +193,7 @@ const writeString = (view, offset, string) => {
 };
 
 /**
- * Encodes an AudioBuffer as an uncompressed 16-bit PCM WAV Blob.
- * WAV is used (rather than re-encoding to the original codec) because it
- * requires no external encoder library and is lossless, which matters
- * once effects processing is applying real DSP to the samples.
- *
- * @param {AudioBuffer} audioBuffer
- * @returns {Blob}
+ * Encodes an AudioBuffer as an uncompressed 16-bit PCM WAV Blob
  */
 export function encodeWavBlob(audioBuffer) {
   const numChannels = audioBuffer.numberOfChannels;
@@ -205,11 +237,6 @@ export function encodeWavBlob(audioBuffer) {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
-/**
- * Filename-safe time label, e.g. 65.4 -> "1m05s".
- * (formatTime()/formatMs() in utils/time.js use a colon, which isn't a
- * valid filename character on Windows.)
- */
 export function secondsToFileLabel(seconds) {
   const total = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(total / 60);
