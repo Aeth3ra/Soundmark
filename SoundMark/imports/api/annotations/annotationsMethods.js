@@ -73,10 +73,7 @@ Meteor.methods({
       );
     }
 
-    validateAnnotation(
-      { start, end },
-      audioFile.durationSeconds
-    );
+    validateAnnotation({ start, end }, audioFile.durationSeconds);
 
     // Insert into Mongo. createdBy is always this.userId (the calling user's
     // account, guest or otherwise) — never trust a client-supplied id.
@@ -98,43 +95,37 @@ Meteor.methods({
 
   async "annotations.update"(annotationId, updates) {
     if (!this.userId) {
-        throw new Meteor.Error("not-authorized", "Must be logged in.");
+      throw new Meteor.Error("not-authorized", "Must be logged in.");
     }
 
     check(annotationId, String);
 
     check(updates, {
-        title: String,
-        colour: String,
-        tags: [String],
-        comment: String
+      title: String,
+      colour: String,
+      tags: [String],
+      comment: String
     });
 
-    const annotation =
-        await AnnotationsCollection.findOneAsync(annotationId);
+    const annotation = await AnnotationsCollection.findOneAsync(annotationId);
 
     if (!annotation) {
-        throw new Meteor.Error(
+      throw new Meteor.Error(
         "annotation-not-found",
         "The annotation does not exist."
-        );
+      );
     }
 
-    validateAnnotation(
-      { start, end },
-      audioFile.durationSeconds
-    );
-
     await AnnotationsCollection.updateAsync(annotationId, {
-        $set: {
+      $set: {
         title: updates.title.trim(),
         colour: updates.colour,
         tags: updates.tags,
         comment: updates.comment.trim(),
         updatedAt: new Date()
-        }
+      }
     });
-    },
+  },
 
   /**
    * Method to delete an annotation
