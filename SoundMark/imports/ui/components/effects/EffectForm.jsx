@@ -10,6 +10,8 @@ export const EffectForm = ({ fileId, region, duration, order, onClose }) => {
 	const [semitones, setSemitones] = useState("0");
 	const [error, setError] = useState(null);
 	const [saving, setSaving] = useState(false);
+	const [filterType, setFilterType] = useState("lowpass");
+	const [filterFrequency, setFilterFrequency] = useState("1000");
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
@@ -69,6 +71,21 @@ export const EffectForm = ({ fileId, region, duration, order, onClose }) => {
 			params = {
 				semitones: shift,
 			};
+		} else if (type === "filter") {
+			const frequency = Number(filterFrequency);
+
+			if (
+				(filterType !== "lowpass" && filterType !== "highpass") ||
+				filterFrequency.trim() === "" ||
+				!Number.isFinite(frequency) ||
+				frequency <= 0 ||
+				frequency > 24000
+			) {
+				setError("Enter a filter frequency between 1 and 24000 Hz.");
+				return;
+			}
+
+			params = { filterType, frequency };
 		} else {
 			setError("Choose a supported effect type.");
 			return;
@@ -149,6 +166,7 @@ export const EffectForm = ({ fileId, region, duration, order, onClose }) => {
 					<option value="normalize">RMS normalisation</option>
 					<option value="amplify">Region amplification</option>
 					<option value="pitchShift">Pitch / key shift</option>
+					<option value="filter">Low / high-pass filter</option>
 				</select>
 			</div>
 
@@ -196,7 +214,7 @@ export const EffectForm = ({ fileId, region, duration, order, onClose }) => {
 						mutes the region. Maximum: 4×.
 					</p>
 				</div>
-			) : (
+			) : type === "pitchShift" ? (
 				<div className="flex flex-col gap-3">
 					<label htmlFor="effect-semitones" className="text-sm font-medium">
 						Pitch / key shift
@@ -238,6 +256,59 @@ export const EffectForm = ({ fileId, region, duration, order, onClose }) => {
 						Negative values lower the pitch/key; positive values raise it. 12 semitones
 						equals one octave.
 					</p>
+				</div>
+			) : (
+				<div className="flex flex-col gap-3">
+					<div className="flex flex-col gap-2">
+						<label htmlFor="effect-filter-type" className="text-sm font-medium">
+							Filter type
+						</label>
+
+						<select
+							id="effect-filter-type"
+							value={filterType}
+							disabled={saving}
+							onChange={(event) => {
+								setFilterType(event.target.value);
+								setError(null);
+							}}
+							className="select select-bordered w-full"
+						>
+							<option value="lowpass">Low-pass</option>
+							<option value="highpass">High-pass</option>
+						</select>
+					</div>
+
+					<div className="flex flex-col gap-2">
+						<label htmlFor="effect-filter-frequency" className="text-sm font-medium">
+							Cutoff frequency (Hz)
+						</label>
+
+						<input
+							id="effect-filter-frequency"
+							type="number"
+							min="1"
+							max="24000"
+							step="1"
+							required
+							value={filterFrequency}
+							disabled={saving}
+							onChange={(event) => {
+								setFilterFrequency(event.target.value);
+								setError(null);
+							}}
+							aria-describedby="effect-filter-frequency-help"
+							className="input input-bordered w-full"
+						/>
+
+						<p
+							id="effect-filter-frequency-help"
+							className="text-xs text-base-content/60"
+						>
+							Low-pass keeps frequencies below the cutoff; high-pass keeps frequencies
+							above it.
+						</p>
+					</div>
 				</div>
 			)}
 

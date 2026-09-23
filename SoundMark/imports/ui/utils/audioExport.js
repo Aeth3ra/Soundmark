@@ -102,6 +102,65 @@ async function renderPitchShift(audioBuffer, semitones) {
 	return rendered.get();
 }
 
+/**
+ * Applies a low-pass or high-pass filter to an AudioBuffer.
+ *
+ * The rendered buffer has the same duration, channel count and sample rate
+ * as the input. The input buffer is never modified.
+ */
+async function renderFilter(audioBuffer, filterType, frequency) {
+	if (filterType !== "lowpass" && filterType !== "highpass") {
+		throw new Error("Filter must be either low-pass or high-pass.");
+	}
+
+	if (!Number.isFinite(frequency) || frequency <= 0) {
+		throw new Error("Filter frequency must be greater than 0 Hz.");
+	}
+
+	// The cutoff frequency must be below the Nyquist frequency for the
+	// particular audio being processed.
+	if (frequency >= audioBuffer.sampleRate / 2) {
+		throw new Error(
+			`Filter frequency must be below ${audioBuffer.sampleRate / 2} Hz for this audio.`,
+		);
+	}
+
+	const OfflineContext = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
+
+	if (!OfflineContext) {
+		throw new Error("This browser does not support offline audio processing.");
+	}
+
+	const context = new OfflineContext(
+		audioBuffer.numberOfChannels,
+		audioBuffer.length,
+		audioBuffer.sampleRate,
+	);
+
+	const source = context.createBufferSource();
+	const filter = context.createBiquadFilter();
+
+	source.buffer = audioBuffer;
+
+	filter.type = filterType;
+	filter.frequency.setValueAtTime(frequency, 0);
+
+	filter.channelCount = audioBuffer.numberOfChannels;
+	filter.channelCountMode = "explicit";
+	filter.channelInterpretation = "discrete";
+
+	source.connect(filter);
+	filter.connect(context.destination);
+	source.start(0);
+
+	try {
+		return await context.startRendering();
+	} finally {
+		source.disconnect();
+		filter.disconnect();
+	}
+}
+
 /** Apply saved effects to the full track. The source buffer is never mutated */
 export async function applyEffectsChain(audioBuffer, effects = []) {
 	if (!Array.isArray(effects)) {
@@ -143,7 +202,8 @@ export async function applyEffectsChain(audioBuffer, effects = []) {
 		if (
 			effect.type !== "normalize" &&
 			effect.type !== "amplify" &&
-			effect.type !== "pitchShift"
+			effect.type !== "pitchShift" &&
+			effect.type !== "filter"
 		) {
 			throw new Error(`Rendering ${effect.type} effects is not implemented yet.`);
 		}
@@ -186,6 +246,18 @@ export async function applyEffectsChain(audioBuffer, effects = []) {
 			) {
 				throw new Error("Invalid pitch shift. Use a value between -24 and 24 semitones.");
 			}
+		} else if (effect.type === "filter") {
+			if (
+				!params ||
+				(params.filterType !== "lowpass" && params.filterType !== "highpass") ||
+				!Number.isFinite(params.frequency) ||
+				params.frequency <= 0 ||
+				params.frequency > 24000
+			) {
+				throw new Error(
+					"Invalid filter settings. Use a low-pass or high-pass filter with a frequency between 0 and 24000 Hz.",
+				);
+			}
 		}
 
 		const region = sliceAudioBuffer(output, start, end);
@@ -197,6 +269,8 @@ export async function applyEffectsChain(audioBuffer, effects = []) {
 
 		if (effect.type === "pitchShift") {
 			rendered = await renderPitchShift(region, params.semitones);
+		} else if (effect.type === "filter") {
+			rendered = await renderFilter(region, params.filterType, params.frequency);
 		} else {
 			const gain = effect.type === "normalize" ? params.targetRms / rms : params.gain;
 

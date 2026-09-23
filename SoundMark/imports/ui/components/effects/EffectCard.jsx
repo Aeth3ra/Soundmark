@@ -21,7 +21,14 @@ export const EffectCard = ({ effect, onSeek, userId, isHost }) => {
 		(!Number.isInteger(effect.params?.semitones) ||
 			effect.params.semitones < -24 ||
 			effect.params.semitones > 24);
-	const needsRecreation = invalidNormalisation || invalidAmplification || invalidPitchShift;
+	const invalidFilter =
+		effect.type === "filter" &&
+		((effect.params?.filterType !== "lowpass" && effect.params?.filterType !== "highpass") ||
+			!Number.isFinite(effect.params?.frequency) ||
+			effect.params.frequency <= 0 ||
+			effect.params.frequency > 24000);
+	const needsRecreation =
+		invalidNormalisation || invalidAmplification || invalidPitchShift || invalidFilter;
 
 	const handleToggle = async () => {
 		if (!canEdit || busy || needsRecreation) return;
@@ -72,10 +79,19 @@ export const EffectCard = ({ effect, onSeek, userId, isHost }) => {
 			: `Gain: ${effect.params.gain}×`;
 	} else if (effect.type === "pitchShift") {
 		title = invalidPitchShift ? "Pitch shift: recreate effect" : "Pitch / key shift";
-
 		details = invalidPitchShift
 			? "Invalid pitch shift: delete this effect and recreate it."
 			: `${effect.params.semitones > 0 ? "+" : ""}${effect.params.semitones} semitones`;
+	} else if (effect.type === "filter") {
+		title = invalidFilter
+			? "Filter: recreate effect"
+			: effect.params.filterType === "lowpass"
+				? "Low-pass filter"
+				: "High-pass filter";
+
+		details = invalidFilter
+			? "Invalid filter settings: delete this effect and recreate it."
+			: `Cutoff: ${effect.params.frequency} Hz`;
 	} else {
 		title = "Unknown effect";
 		details = effect.type;
