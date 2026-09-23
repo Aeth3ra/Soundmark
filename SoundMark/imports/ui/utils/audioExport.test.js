@@ -95,5 +95,55 @@ if (Meteor.isClient) {
 				assert.isTrue(changedInside);
 			});
 		});
+
+		describe("applyEffectsChain filtering", function () {
+			it("filters only the selected region without modifying the source", async function () {
+				if (!(globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext)) {
+					this.skip();
+					return;
+				}
+
+				const sampleRate = 44100;
+				const duration = 0.5;
+				const buffer = createBuffer(Math.floor(sampleRate * duration), sampleRate, 1);
+
+				const original = new Float32Array(buffer.getChannelData(0));
+
+				const processed = await applyEffectsChain(buffer, [
+					{
+						_id: "filter-test",
+						type: "filter",
+						start: 0.1,
+						end: 0.4,
+						params: {
+							filterType: "lowpass",
+							frequency: 1000,
+						},
+						enabled: true,
+						order: 0,
+					},
+				]);
+
+				// The source buffer must not have been mutated.
+				assert.deepEqual(Array.from(buffer.getChannelData(0)), Array.from(original));
+
+				// The processed buffer must retain the original format.
+				assert.equal(processed.numberOfChannels, buffer.numberOfChannels);
+				assert.equal(processed.length, buffer.length);
+				assert.equal(processed.sampleRate, buffer.sampleRate);
+
+				// Something in the selected region should have changed.
+				let changedInside = false;
+
+				for (let i = Math.floor(0.1 * sampleRate); i < Math.ceil(0.4 * sampleRate); i++) {
+					if (processed.getChannelData(0)[i] !== original[i]) {
+						changedInside = true;
+						break;
+					}
+				}
+
+				assert.isTrue(changedInside);
+			});
+		});
 	});
 }
