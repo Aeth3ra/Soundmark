@@ -395,7 +395,10 @@ export const PlayerPage = () => {
 									targetUser={targetUser}
 									onUnlock={stopFollowing}
 								/>
-								<AudioExportButton fileId={fileId} />
+								<AudioExportButton
+									fileId={fileId}
+									effects={effects}
+								/>
 								<ProjectPackageExportButton
 									fileId={fileId}
 									annotations={annotations}
