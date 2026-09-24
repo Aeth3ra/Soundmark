@@ -4,9 +4,12 @@ import { AudioExportButton } from "../components/AudioExportButton";
 import { RegionExportButton } from "../components/RegionExportButton";
 import { ProjectPackageExportButton } from "../components/ProjectPackageExportButton";
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
+import { EffectForm } from "../components/effects/EffectForm";
+import { EffectList } from "../components/effects/EffectList";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
 import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
+import { EffectsCollection } from "../../api/effects/effectsCollection";
 import { useAnnotationRender } from "../hooks/useAnnotationRender";
 import { useAnnotationTrigger } from "../hooks/useAnnotationTrigger";
 import { useRegionsPlugin } from "../hooks/useRegions";
@@ -33,404 +36,518 @@ import { SyncStatusToggle } from "../components/SyncStatusToggle";
 import { ToastError } from "../components/ToastError";
 
 export const PlayerPage = () => {
-  const { fileId } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
+	const { fileId } = useParams();
+	const location = useLocation();
+	const navigate = useNavigate();
 
-  const [copied, setCopied] = useState(null);
-  const [audioUrl, setAudioUrl] = useState(null);
-  const [audioMissing, setAudioMissing] = useState(false);
-  const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
-  const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
-  const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [editingAnnotation, setEditingAnnotation] = useState(null);
-  const [followingUserId, setFollowingUserId] = useState(null);
+	const [copied, setCopied] = useState(null);
+	const [audioSource, setAudioSource] = useState(null);
+	const audioUrl = audioSource?.fileId === fileId ? audioSource.url : null;
+	const [audioMissing, setAudioMissing] = useState(false);
+	const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
+	const [isEffectsListOpen, setIsEffectsListOpen] = useState(false);
+	const [effectRegion, setEffectRegion] = useState(null);
+	const [effectActionError, setEffectActionError] = useState(null);
+	const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
+	const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
+	const [selectedTags, setSelectedTags] = useState([]);
+	const [editingAnnotation, setEditingAnnotation] = useState(null);
+	const [followingUserId, setFollowingUserId] = useState(null);
 
-  // Tags currently used to filter the annotation list
-  const toggleTagFilter = (tag) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-  const clearTagFilters = () => setSelectedTags([]);
+	// A form opened for one file must not carry over to another file.
+	useEffect(() => {
+		setEffectRegion(null);
+		setEffectActionError(null);
+		setIsEffectsListOpen(false);
+	}, [fileId]);
 
-  // Annotations hidden from the waveform overlay (still shown, dimmed, in the list)
-  const toggleAnnotationHidden = (id) => {
-    setHiddenAnnotationIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+	// Tags currently used to filter the annotation list
+	const toggleTagFilter = (tag) => {
+		setSelectedTags((prev) =>
+			prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+		);
+	};
+	const clearTagFilters = () => setSelectedTags([]);
 
-  // Get user
-  const { userId, name, isReady } = useGuestAccount();
+	// Annotations hidden from the waveform overlay (still shown, dimmed, in the list)
+	const toggleAnnotationHidden = (id) => {
+		setHiddenAnnotationIds((prev) => {
+			const next = new Set(prev);
+			next.has(id) ? next.delete(id) : next.add(id);
+			return next;
+		});
+	};
 
-  const identity = useMemo(
-    () => ({
-      userId,
-      name
-    }),
-    [userId, name]
-  );
+	// Get user
+	const { userId, name, isReady } = useGuestAccount();
 
-  // Tracks who's hosting this file's session, and whether that host has
-  // left (host leaving ends the session for everyone else).
-  const { isHost, sessionEnded } = useSession({ fileId, userId });
-  // If session has eneded, kicks out other users
-  useEffect(() => {
-    if (sessionEnded) {
-      navigate("/", { state: { sessionEnded: true } });
-    }
-  }, [sessionEnded, navigate]);
+	const identity = useMemo(
+		() => ({
+			userId,
+			name,
+		}),
+		[userId, name],
+	);
 
-  // Load Audio
-  useEffect(() => {
-    async function loadAudio() {
-      if (!fileId) {
-        navigate("/");
-        return;
-      }
+	// Tracks who's hosting this file's session, and whether that host has
+	// left (host leaving ends the session for everyone else).
+	const { isHost, sessionEnded } = useSession({ fileId, userId });
+	// If session has eneded, kicks out other users
+	useEffect(() => {
+		if (sessionEnded) {
+			navigate("/", { state: { sessionEnded: true } });
+		}
+	}, [sessionEnded, navigate]);
 
-      try {
-        const url = await getPlayableUrl(fileId);
-        setAudioUrl(url);
-      } catch (err) {
-        setAudioMissing(true);
-      }
-    }
+	// Load Audio
+	useEffect(() => {
+		let cancelled = false;
+		setAudioMissing(false);
+		async function loadAudio() {
+			if (!fileId) {
+				navigate("/");
+				return;
+			}
 
-    loadAudio();
-  }, [fileId, navigate]);
+			try {
+				const url = await getPlayableUrl(fileId);
+				if (!cancelled) setAudioSource({ fileId, url });
+			} catch (err) {
+				if (!cancelled) setAudioMissing(true);
+			}
+		}
 
-  // Load wavesurfer
-  const {
-    containerRef,
-    isPlaying,
-    isLooping,
-    playbackRate,
-    currentTime,
-    duration,
-    zoom,
-    play,
-    pause,
-    playPause,
-    seekTo,
-    setVolume,
-    setZoom,
-    setPlaybackRate,
-    toggleLoop,
-    wavesurferInstance
-  } = useWavesurfer(audioUrl);
+		loadAudio();
+		return () => {
+			cancelled = true;
+		};
+	}, [fileId, navigate]);
 
-  // Load regions plugin for wavesurfer
-  const regionsPlugin = useRegionsPlugin(wavesurferInstance);
-  const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
-  const regionAnalysis = useRegionAnalysis(wavesurferInstance, activeRegion);
+	// Effects must be available before preparing the playback preview.
+	const isEffectsLoading = useSubscribe("effects.forFile", fileId);
+	const effects = useTracker(() => {
+		return EffectsCollection.find(
+			{ fileId },
+			{ sort: { order: 1, createdAt: 1, _id: 1 } },
+		).fetch();
+	}, [fileId]);
+	const nextEffectOrder = effects.reduce((next, effect) => Math.max(next, effect.order + 1), 0);
 
-  useZoomPlugin(wavesurferInstance);
+	// Load wavesurfer
+	const {
+		containerRef,
+		isPlaying,
+		isLooping,
+		playbackRate,
+		currentTime,
+		duration,
+		zoom,
+		play,
+		pause,
+		playPause,
+		seekTo,
+		setVolume,
+		setZoom,
+		setPlaybackRate,
+		toggleLoop,
+		wavesurferInstance,
+		isProcessing,
+		isAudioReady,
+		audioError,
+		audioVersion,
+		retryAudio,
+	} = useWavesurfer(audioUrl, effects, !isEffectsLoading());
 
-  // Subscribes to annotation collection for the current file
-  const isAnnotationsLoading = useSubscribe("annotations.forFile", fileId);
-  const annotations = useTracker(() => {
-    return AnnotationsCollection.find(
-      { fileId },
-      { sort: { start: 1 } }
-    ).fetch();
-  }, [fileId]);
-  const annotationAnalyses = useAnnotationAnalysis(
-    wavesurferInstance,
-    annotations,
-    isAnnotateListOpen
-  );
+	// Load regions plugin for wavesurfer
+	const regionsPlugin = useRegionsPlugin(wavesurferInstance);
+	const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
+	const regionAnalysis = useRegionAnalysis(wavesurferInstance, activeRegion, audioVersion);
 
-  // Subscribes to the display names of everyone who has authored an
-  // annotation here, so cards can show "who made this" without storing
-  // the name on the annotation itself.
-  const isAuthorsLoading = useSubscribe("annotations.authorsForFile", fileId);
+	useZoomPlugin(wavesurferInstance);
 
-  //Get presences of other users
-  const { others: otherUsers } = usePresence({
-    fileId,
-    identity,
-    position: currentTime,
-    playbackRate,
-    isPlaying,
-    followingUserId
-  });
+	// Subscribes to annotation collection for the current file
+	const isAnnotationsLoading = useSubscribe("annotations.forFile", fileId);
+	const annotations = useTracker(() => {
+		return AnnotationsCollection.find({ fileId }, { sort: { start: 1 } }).fetch();
+	}, [fileId]);
+	const annotationAnalyses = useAnnotationAnalysis(
+		wavesurferInstance,
+		annotations,
+		isAnnotateListOpen,
+		audioVersion,
+	);
 
-  //For playhead sync
-  const { targetUser, syncError, clearSyncError, stopFollowing, toggleFollow } =
-    useWaveformSync({
-      duration,
-      otherUsers,
-      currentUserId: identity?.userId,
-      followingUserId,
-      setFollowingUserId,
-      currentTime,
-      seekTo,
-      play,
-      pause,
-      isPlaying,
-      playbackRate,
-      setPlaybackRate
-    });
+	// Subscribes to the display names of everyone who has authored an
+	// annotation here, so cards can show "who made this" without storing
+	// the name on the annotation itself.
+	const isAuthorsLoading = useSubscribe("annotations.authorsForFile", fileId);
 
-  // userId -> display name, for showing "who made this" on annotation cards
-  const userNames = useUserNames({ fileId, otherUsers, userId, name });
+	//Get presences of other users
+	const { others: otherUsers } = usePresence({
+		fileId,
+		identity,
+		position: currentTime,
+		playbackRate,
+		isPlaying,
+		followingUserId,
+	});
 
-  // Renders the annotations
-  const tooltipRef = useRef(null);
-  const visibleAnnotations = useMemo(() => {
-    return annotations.filter((a) => !hiddenAnnotationIds.has(a._id));
-  }, [annotations, hiddenAnnotationIds]);
-  const markerSlots = useAnnotationRender(regionsPlugin, visibleAnnotations);
+	//For playhead sync
+	const { targetUser, syncError, clearSyncError, stopFollowing, toggleFollow } = useWaveformSync({
+		duration,
+		otherUsers,
+		currentUserId: identity?.userId,
+		followingUserId,
+		setFollowingUserId,
+		currentTime,
+		seekTo,
+		play,
+		pause,
+		isPlaying,
+		playbackRate,
+		setPlaybackRate,
+	});
 
-  // Copies the current link into the clipboard
-  const handleShare = async () => {
-    const url = `${window.location.origin}${location.pathname}${location.search}`;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+	// userId -> display name, for showing "who made this" on annotation cards
+	const userNames = useUserNames({ fileId, otherUsers, userId, name });
 
-  // Seeks the waveform to a given time (seconds) when an annotation is clicked
-  const handleSeekToAnnotation = (seconds) => {
-    if (!wavesurferInstance) return;
-    wavesurferInstance.setTime(seconds);
-  };
+	// Renders the annotations
+	const tooltipRef = useRef(null);
+	const visibleAnnotations = useMemo(() => {
+		return annotations.filter((a) => !hiddenAnnotationIds.has(a._id));
+	}, [annotations, hiddenAnnotationIds]);
+	const markerSlots = useAnnotationRender(regionsPlugin, visibleAnnotations);
 
-  // Session is over screen
-  if (audioMissing) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center gap-4 bg-base-300 px-6 text-center">
-        <img
-          src="/icon-512.png"
-          alt="SoundMark logo"
-          className="h-10 w-10 opacity-70"
-        />
-        <h1 className="text-xl font-bold">This session has ended</h1>
-        <p className="text-base-content/60 text-sm max-w-sm">
-          The audio for this session is no longer available. It may have been
-          removed after the host ended things.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="btn btn-primary btn-sm"
-        >
-          Back to home
-        </button>
-      </div>
-    );
-  }
+	// Copies the current link into the clipboard
+	const handleShare = async () => {
+		const url = `${window.location.origin}${location.pathname}${location.search}`;
+		await navigator.clipboard.writeText(url);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
 
-  // In session
-  return (
-    <div className="h-screen flex flex-col bg-base-300">
-      {/* Top header: logo + back/share */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-base-300 bg-base-100">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/")}
-            className="btn btn-ghost btn-sm gap-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-          <div className="w-px h-5 bg-base-300 mx-1" />
-          <img src="/icon-512.png" alt="SoundMark logo" className="h-6 w-6" />
-          <span className="text-lg font-bold">Soundmark</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Host indicator - only shown to the host themselves */}
-          {isHost && (
-            <span
-              className="badge badge-primary badge-sm gap-1 py-3"
-              title="Leaving will end this session for everyone"
-            >
-              <Crown className="h-3 w-3" />
-              You're hosting
-            </span>
-          )}
-          {/* Workspace users */}
-          <WorkspaceUsers currentUser={identity} otherUsers={otherUsers} />
+	// Seeks the waveform to a given time (seconds) when an annotation is clicked
+	const handleSeekToAnnotation = (seconds) => {
+		if (duration > 0) seekTo(seconds / duration);
+	};
 
-          {/* Share button */}
-          <button
-            onClick={handleShare}
-            className="btn btn-outline btn-sm gap-2"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Link2 className="h-4 w-4" />
-                Share session
-              </>
-            )}
-          </button>
-        </div>
-      </header>
+	// Session is over screen
+	if (audioMissing) {
+		return (
+			<div className="h-screen flex flex-col items-center justify-center gap-4 bg-base-300 px-6 text-center">
+				<img src="/icon-512.png" alt="SoundMark logo" className="h-10 w-10 opacity-70" />
+				<h1 className="text-xl font-bold">This session has ended</h1>
+				<p className="text-base-content/60 text-sm max-w-sm">
+					The audio for this session is no longer available. It may have been removed
+					after the host ended things.
+				</p>
+				<button onClick={() => navigate("/")} className="btn btn-primary btn-sm">
+					Back to home
+				</button>
+			</div>
+		);
+	}
 
-      {/* Main area: player (left) + annotations sidebar  */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Player column */}
-        <div className="flex-1 flex flex-col overflow-y-auto">
-          {!audioUrl ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-4">
-              <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="text-base-content/60 text-sm">Loading audio...</p>
-            </div>
-          ) : (
-            <>
-              {/* Toolbar  */}
-              <div className="flex items-center gap-6 px-6 py-3 border-b border-base-300 bg-base-100">
-                <PlayerControls
-                  isPlaying={isPlaying}
-                  isLooping={isLooping}
-                  playbackRate={playbackRate}
-                  currentTime={currentTime}
-                  duration={duration}
-                  zoom={zoom}
-                  onPlayPause={playPause}
-                  onToggleLoop={toggleLoop}
-                  onPlaybackRateChange={setPlaybackRate}
-                  onVolumeChange={setVolume}
-                  onZoomChange={setZoom}
-                />
+	// In session
+	return (
+		<div className="h-screen flex flex-col bg-base-300">
+			{/* Top header: logo + back/share */}
+			<header className="flex items-center justify-between px-6 py-4 border-b border-base-300 bg-base-100">
+				<div className="flex items-center gap-3">
+					<button onClick={() => navigate("/")} className="btn btn-ghost btn-sm gap-2">
+						<ChevronLeft className="h-4 w-4" />
+						Back
+					</button>
+					<div className="w-px h-5 bg-base-300 mx-1" />
+					<img src="/icon-512.png" alt="SoundMark logo" className="h-6 w-6" />
+					<span className="text-lg font-bold">Soundmark</span>
+				</div>
+				<div className="flex items-center gap-3">
+					{/* Host indicator - only shown to the host themselves */}
+					{isHost && (
+						<span
+							className="badge badge-primary badge-sm gap-1 py-3"
+							title="Leaving will end this session for everyone"
+						>
+							<Crown className="h-3 w-3" />
+							You're hosting
+						</span>
+					)}
+					{/* Workspace users */}
+					<WorkspaceUsers currentUser={identity} otherUsers={otherUsers} />
 
-                <div className="flex-1" />
-                <SyncStatusToggle
-                  targetUser={targetUser}
-                  onUnlock={stopFollowing}
-                />
-                <AudioExportButton fileId={fileId} />
-                <ProjectPackageExportButton
-                  fileId={fileId}
-                  annotations={annotations}
-                />
+					{/* Share button */}
+					<button onClick={handleShare} className="btn btn-outline btn-sm gap-2">
+						{copied ? (
+							<>
+								<Check className="h-4 w-4" />
+								Copied!
+							</>
+						) : (
+							<>
+								<Link2 className="h-4 w-4" />
+								Share session
+							</>
+						)}
+					</button>
+				</div>
+			</header>
 
-                <button
-                  onClick={() => setIsAnnotateListOpen((open) => !open)}
-                  className={`btn btn-sm gap-2 ${isAnnotateListOpen ? "btn-primary" : "btn-outline"}`}
-                >
-                  <ListMusic className="h-4 w-4" />
-                  Annotations
-                  {annotations.length > 0 && (
-                    <span className="badge badge-sm">{annotations.length}</span>
-                  )}
-                </button>
-              </div>
+			{/* Main area: player (left) + annotations sidebar  */}
+			<div className="flex-1 flex overflow-hidden">
+				{/* Player column */}
+				<div className="flex-1 flex flex-col overflow-y-auto">
+					{!audioUrl ? (
+						<div className="flex-1 flex flex-col items-center justify-center gap-4">
+							<span className="loading loading-spinner loading-lg text-primary"></span>
+							<p className="text-base-content/60 text-sm">Loading audio...</p>
+						</div>
+					) : (
+						<>
+							{isProcessing && (
+								<p role="status" className="px-6 py-2 text-sm text-base-content/60">
+									Updating audio preview…
+								</p>
+							)}
+							{audioError && (
+								<div role="alert" className="alert alert-error mx-6 my-2">
+									<span>{audioError}</span>
+									<button
+										type="button"
+										onClick={retryAudio}
+										className="btn btn-sm"
+									>
+										Retry
+									</button>
+								</div>
+							)}
+							{/* Toolbar  */}
+							<div className="flex items-center gap-6 px-6 py-3 border-b border-base-300 bg-base-100">
+								<PlayerControls
+									key={fileId}
+									disabled={!isAudioReady}
+									isPlaying={isPlaying}
+									isLooping={isLooping}
+									playbackRate={playbackRate}
+									currentTime={currentTime}
+									duration={duration}
+									zoom={zoom}
+									onPlayPause={playPause}
+									onToggleLoop={toggleLoop}
+									onPlaybackRateChange={setPlaybackRate}
+									onVolumeChange={setVolume}
+									onZoomChange={setZoom}
+								/>
 
-              {/* Waveform  */}
-              <div className="flex-1 px-6 py-6">
-                <div className="bg-base-100 rounded-box shadow-xl p-6 flex flex-col">
-                  <div className="bg-base-200/40 rounded-box flex-1 p-4">
-                    <WaveformDisplay
-                      containerRef={containerRef}
-                      wavesurferInstance={wavesurferInstance}
-                      duration={duration}
-                      otherUsers={otherUsers}
-                      followingUserId={followingUserId}
-                      onToggleLock={toggleFollow}
-                    />
-                  </div>
-                </div>
-              </div>
+								<div className="flex-1" />
+								<SyncStatusToggle
+									targetUser={targetUser}
+									onUnlock={stopFollowing}
+								/>
+								<AudioExportButton fileId={fileId} />
+								<ProjectPackageExportButton
+									fileId={fileId}
+									annotations={annotations}
+								/>
 
-              {/* Region time display */}
-              <RegionSelectionDisplay
-                activeRegion={activeRegion}
-                analysis={regionAnalysis}
-              />
+								<button
+									onClick={() => {
+										setIsAnnotateListOpen((open) => !open);
+										setIsEffectsListOpen(false);
+									}}
+									className={`btn btn-sm gap-2 ${isAnnotateListOpen ? "btn-primary" : "btn-outline"}`}
+								>
+									<ListMusic className="h-4 w-4" />
+									Annotations
+									{annotations.length > 0 && (
+										<span className="badge badge-sm">{annotations.length}</span>
+									)}
+								</button>
 
-              {/* Region selection actions */}
-              <div className="flex items-center gap-2 self-start ml-6 mb-4">
-                <button
-                  onClick={() => {
-                    setEditingAnnotation(null);
-                    openAnnotation(
-                      activeRegion
-                        ? {
-                            startMs: activeRegion.start * 1000,
-                            endMs: activeRegion.end * 1000
-                          }
-                        : {
-                            startMs: currentTime * 1000,
-                            endMs: null
-                          }
-                    );
-                  }}
-                  className="btn btn-sm btn-outline gap-2"
-                >
-                  Create annotation
-                </button>
+								<button
+									type="button"
+									onClick={() => {
+										setIsEffectsListOpen((open) => !open);
+										setIsAnnotateListOpen(false);
+									}}
+									className={`btn btn-sm gap-2 ${isEffectsListOpen ? "btn-primary" : "btn-outline"}`}
+								>
+									Effects
+									{effects.length > 0 && (
+										<span className="badge badge-sm">{effects.length}</span>
+									)}
+								</button>
+							</div>
 
-                <button
-                  onClick={clearRegion}
-                  disabled={!activeRegion}
-                  className="btn btn-sm btn-outline gap-2"
-                >
-                  Clear region
-                </button>
+							{/* Waveform  */}
+							<div
+								aria-busy={isProcessing}
+								className={`flex-1 px-6 py-6 ${!isAudioReady ? "pointer-events-none" : ""}`}
+							>
+								<div className="bg-base-100 rounded-box shadow-xl p-6 flex flex-col">
+									<div className="bg-base-200/40 rounded-box flex-1 p-4">
+										<WaveformDisplay
+											containerRef={containerRef}
+											wavesurferInstance={wavesurferInstance}
+											duration={duration}
+											otherUsers={otherUsers}
+											followingUserId={followingUserId}
+											onToggleLock={toggleFollow}
+										/>
+									</div>
+								</div>
+							</div>
 
-                <RegionExportButton
-                  fileId={fileId}
-                  activeRegion={activeRegion}
-                />
-              </div>
-            </>
-          )}
-        </div>
+							{/* Region time display */}
+							<RegionSelectionDisplay
+								activeRegion={activeRegion}
+								analysis={regionAnalysis}
+							/>
 
-        {/* Annotations sidebar */}
-        <AnnotationList
-          annotations={annotations}
-          isOpen={isAnnotateListOpen}
-          onClose={() => setIsAnnotateListOpen(false)}
-          onSeek={handleSeekToAnnotation}
-          selectedTags={selectedTags}
-          onToggleTagFilter={toggleTagFilter}
-          onClearFilters={clearTagFilters}
-          hiddenIds={hiddenAnnotationIds}
-          onToggleHidden={toggleAnnotationHidden}
-          userNames={userNames}
-          onEdit={setEditingAnnotation}
-          analyses={annotationAnalyses}
-        />
-      </div>
+							{/* Region selection actions */}
+							<div className="flex items-center gap-2 self-start ml-6 mb-4">
+								<button
+									onClick={() => {
+										setEffectRegion(null);
+										setEditingAnnotation(null);
+										openAnnotation(
+											activeRegion
+												? {
+														startMs: activeRegion.start * 1000,
+														endMs: activeRegion.end * 1000,
+													}
+												: {
+														startMs: currentTime * 1000,
+														endMs: null,
+													},
+										);
+									}}
+									className="btn btn-sm btn-outline gap-2"
+								>
+									Create annotation
+								</button>
 
-      {/* Annotation form - only appears if triggered or editing */}
-      <AnnotationForm
-        trigger={trigger}
-        annotation={editingAnnotation}
-        fileId={fileId}
-        onClose={() => {
-          closeAnnotation();
-          setEditingAnnotation(null);
-          clearRegion();
-        }}
-      />
+								<button
+									type="button"
+									disabled={
+										!userId ||
+										duration <= 0 ||
+										isEffectsLoading() ||
+										!isAudioReady ||
+										Boolean(effectRegion)
+									}
+									onClick={() => {
+										setEffectActionError(null);
 
-      {/* Annotation Marker on top of the annotation regions/timestamps */}
-      <AnnotationMarkersLayer
-        markerSlots={markerSlots}
-        tooltipRef={tooltipRef}
-      />
+										if (!activeRegion) {
+											setEffectActionError(
+												"Select a region on the waveform before applying an effect.",
+											);
+											return;
+										}
 
-      {/* Annotation tool tip upon hover */}
-      <AnnotationTooltip ref={tooltipRef} userNames={userNames} />
+										closeAnnotation();
+										setEditingAnnotation(null);
+										// Copy the times so changes to the selection do not move this form's target.
+										setEffectRegion({
+											fileId,
+											start: activeRegion.start,
+											end: activeRegion.end,
+										});
 
-      {/* Render the generic toast at the bottom of the page */}
-      <ToastError
-        message={syncError}
-        onClose={clearSyncError}
-        autoDismissMs={5000}
-      />
-    </div>
-  );
+										setIsEffectsListOpen(true);
+										setIsAnnotateListOpen(false);
+									}}
+									className="btn btn-sm btn-outline"
+								>
+									Apply effect
+								</button>
+
+								<button
+									onClick={clearRegion}
+									disabled={!activeRegion}
+									className="btn btn-sm btn-outline gap-2"
+								>
+									Clear region
+								</button>
+
+								<RegionExportButton
+									fileId={fileId}
+									activeRegion={activeRegion}
+									effects={effects}
+									isEffectsLoading={isEffectsLoading()}
+								/>
+
+								{effectActionError && (
+									<p role="alert" className="text-error text-sm">
+										{effectActionError}
+									</p>
+								)}
+							</div>
+						</>
+					)}
+				</div>
+
+				{/* Annotations sidebar */}
+				<AnnotationList
+					annotations={annotations}
+					isOpen={isAnnotateListOpen}
+					onClose={() => setIsAnnotateListOpen(false)}
+					onSeek={handleSeekToAnnotation}
+					selectedTags={selectedTags}
+					onToggleTagFilter={toggleTagFilter}
+					onClearFilters={clearTagFilters}
+					hiddenIds={hiddenAnnotationIds}
+					onToggleHidden={toggleAnnotationHidden}
+					userNames={userNames}
+					onEdit={(annotation) => {
+						setEffectRegion(null);
+						setEditingAnnotation(annotation);
+					}}
+					analyses={annotationAnalyses}
+				/>
+
+				<EffectList
+					effects={effects}
+					isOpen={isEffectsListOpen}
+					isLoading={isEffectsLoading()}
+					onClose={() => setIsEffectsListOpen(false)}
+					onSeek={handleSeekToAnnotation}
+					userId={userId}
+					isHost={isHost}
+				/>
+			</div>
+
+			{effectRegion?.fileId === fileId && (
+				<EffectForm
+					fileId={fileId}
+					region={effectRegion}
+					duration={duration}
+					order={nextEffectOrder}
+					onClose={() => setEffectRegion(null)}
+				/>
+			)}
+
+			{/* Annotation form - only appears if triggered or editing */}
+			<AnnotationForm
+				trigger={trigger}
+				annotation={editingAnnotation}
+				fileId={fileId}
+				onClose={() => {
+					closeAnnotation();
+					setEditingAnnotation(null);
+					clearRegion();
+				}}
+			/>
+
+			{/* Annotation Marker on top of the annotation regions/timestamps */}
+			<AnnotationMarkersLayer markerSlots={markerSlots} tooltipRef={tooltipRef} />
+
+			{/* Annotation tool tip upon hover */}
+			<AnnotationTooltip ref={tooltipRef} userNames={userNames} />
+
+			{/* Render the generic toast at the bottom of the page */}
+			<ToastError message={syncError} onClose={clearSyncError} autoDismissMs={5000} />
+		</div>
+	);
 };

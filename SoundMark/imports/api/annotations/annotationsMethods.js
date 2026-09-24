@@ -3,6 +3,41 @@ import { check, Match } from "meteor/check";
 import { AnnotationsCollection } from "./annotationsCollection";
 import { AudioCollection } from "../audio/audioCollection";
 
+// Validation for creating and updating annotations
+function validateAnnotation({ start, end }, durationSeconds) {
+  if (!Number.isFinite(start) || start < 0) {
+    throw new Meteor.Error(
+      "invalid-time",
+      "Annotation start must be a finite non-negative number."
+    );
+  }
+
+  if (end !== null) {
+    if (!Number.isFinite(end) || end <= start) {
+      throw new Meteor.Error(
+        "invalid-time",
+        "Annotation end must be after its start."
+      );
+    }
+  }
+
+  if (Number.isFinite(durationSeconds)) {
+    if (start > durationSeconds) {
+      throw new Meteor.Error(
+        "invalid-time",
+        "The annotation starts after the audio ends."
+      );
+    }
+
+    if (end !== null && end > durationSeconds) {
+      throw new Meteor.Error(
+        "invalid-time",
+        "The annotation ends after the audio."
+      );
+    }
+  }
+}
+
 Meteor.methods({
   /**
    * Method to create an annotation for an audio file
@@ -38,6 +73,8 @@ Meteor.methods({
       );
     }
 
+    validateAnnotation({ start, end }, audioFile.durationSeconds);
+
     // Insert into Mongo. createdBy is always this.userId (the calling user's
     // account, guest or otherwise) — never trust a client-supplied id.
     // Display name is looked up from Meteor.users.profile.name at read time
@@ -58,38 +95,37 @@ Meteor.methods({
 
   async "annotations.update"(annotationId, updates) {
     if (!this.userId) {
-        throw new Meteor.Error("not-authorized", "Must be logged in.");
+      throw new Meteor.Error("not-authorized", "Must be logged in.");
     }
 
     check(annotationId, String);
 
     check(updates, {
-        title: String,
-        colour: String,
-        tags: [String],
-        comment: String
+      title: String,
+      colour: String,
+      tags: [String],
+      comment: String
     });
 
-    const annotation =
-        await AnnotationsCollection.findOneAsync(annotationId);
+    const annotation = await AnnotationsCollection.findOneAsync(annotationId);
 
     if (!annotation) {
-        throw new Meteor.Error(
+      throw new Meteor.Error(
         "annotation-not-found",
         "The annotation does not exist."
-        );
+      );
     }
 
     await AnnotationsCollection.updateAsync(annotationId, {
-        $set: {
+      $set: {
         title: updates.title.trim(),
         colour: updates.colour,
         tags: updates.tags,
         comment: updates.comment.trim(),
         updatedAt: new Date()
-        }
+      }
     });
-    },
+  },
 
   /**
    * Method to delete an annotation

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Play, Pause, Repeat, Volume2, ZoomIn } from "lucide-react";
 import { formatTime } from "../utils/time";
 
@@ -13,13 +13,15 @@ export const PlayerControls = ({
   onPlaybackRateChange,
   onVolumeChange,
   onZoomChange,
-  zoom
+  zoom,
+  disabled = false
 }) => {
   // For playback
   const [speedInput, setSpeedInput] = useState(String(playbackRate));
+  useEffect(() => setSpeedInput(String(playbackRate)), [playbackRate]);
 
   return (
-    <div className="flex items-center gap-4">
+    <fieldset disabled={disabled} className="flex min-w-0 items-center gap-4">
       {/* Play / Pause */}
       <button
         onClick={onPlayPause}
@@ -109,6 +111,6 @@ export const PlayerControls = ({
           className="range range-primary range-xs"
         />
       </div>
-    </div>
+    </fieldset>
   );
 };

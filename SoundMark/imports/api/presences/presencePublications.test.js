@@ -9,8 +9,14 @@ if (Meteor.isServer) {
     const fileId = "file-1";
     const otherFileId = "file-2";
 
+    let userId;
+
     beforeEach(async function () {
       await PresenceCollection.removeAsync({});
+
+      userId = await Meteor.users.insertAsync({
+      profile: { name: "Test User" }
+      });
     });
 
     describe("presence.forFile", function () {
@@ -26,7 +32,7 @@ if (Meteor.isServer) {
           name: "B"
         });
 
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect("presence.forFile", fileId);
 
         // NOTE: "presence" here is a guess at your Mongo.Collection's
@@ -37,14 +43,14 @@ if (Meteor.isServer) {
       });
 
       it("publishes an empty array when nobody is present in the file", async function () {
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         const collections = await collector.collect("presence.forFile", fileId);
 
         assert.deepEqual(collections.presence, []);
       });
 
       it("rejects a non-string fileId via check()", async function () {
-        const collector = new PublicationCollector({});
+        const collector = new PublicationCollector({ userId });
         try {
           await collector.collect("presence.forFile", 12345);
           assert.fail("expected the publication to throw");

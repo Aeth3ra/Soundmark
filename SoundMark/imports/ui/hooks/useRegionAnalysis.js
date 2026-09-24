@@ -9,7 +9,7 @@ const emptyAnalysis = {
   isAnalysing: false
 };
 
-export const useRegionAnalysis = (wavesurferInstance, activeRegion) => {
+export const useRegionAnalysis = (wavesurferInstance, activeRegion, audioVersion = 0) => {
   const [analysis, setAnalysis] = useState(emptyAnalysis);
   const requestId = useRef(0);
 
@@ -61,6 +61,7 @@ export const useRegionAnalysis = (wavesurferInstance, activeRegion) => {
     return () => window.clearTimeout(timeout);
   }, [
     wavesurferInstance,
+    audioVersion,
     activeRegion?.id,
     activeRegion?.start,
     activeRegion?.end

@@ -17,7 +17,8 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
         id,
         slotElement: waveRegion.element, // the empty box wavesurfer created
         annotation: waveRegion.__annotation,
-        isTimestamp: waveRegion.__isTimestamp
+        isTimestamp: waveRegion.__isTimestamp,
+        region: waveRegion
       });
     });
     setMarkerSlots(slots);
@@ -43,13 +44,22 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
       const existing = drawn.get(annotation._id);
 
       if (existing) {
-        // Update time range if it changed
         const currentEnd = isTimestamp ? annotation.start : annotation.end;
+        const newColour = isTimestamp
+          ? annotation.colour || "#ff6b4a"
+          : applyOpacity(annotation.colour, 0.2);
+
+        // Update time range if it changed
         if (
           existing.start !== annotation.start ||
           existing.end !== currentEnd
         ) {
           existing.setOptions({ start: annotation.start, end: currentEnd });
+        }
+
+        // Update colour if it changed
+        if (existing.color !== newColour) {
+          existing.setOptions({ color: newColour });
         }
         // Keep tags/comment fresh even if geometry didn't change
         existing.__annotation = annotation;

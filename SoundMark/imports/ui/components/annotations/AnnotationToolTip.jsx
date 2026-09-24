@@ -8,70 +8,65 @@ import {
 import { createPortal } from "react-dom";
 import { formatTime } from "../../utils/time";
 
+const MARGIN = 8;
+
 /**
  * Tooltip that appears upon hovering annotation marker
  */
 export const AnnotationTooltip = forwardRef(({ userNames = {} }, ref) => {
-  const [state, setState] = useState(null); // { annotation, isTimestamp, top, left, ready } | null
+  const [content, setContent] = useState(null); // { annotation, isTimestamp } | null
+  const [pos, setPos] = useState(null); // { top, left } | null - null while unmeasured
 
-  const elRef = useRef(null);
+  const targetElRef = useRef(null);
+  const tooltipRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
     show(targetEl, annotation, isTimestamp) {
-      // Store the target rectangle, but don't calculate tooltip pos yet
-      const targetRect = targetEl.getBoundingClientRect();
-
-      setState({
-        annotation,
-        isTimestamp,
-        targetRect,
-        ready: false,
-        top: 0,
-        left: 0
-      });
+      targetElRef.current = targetEl;
+      setPos(null); // force a remeasure on the next layout pass
+      setContent({ annotation, isTimestamp });
     },
     hide() {
-      // For Annotation Marker to hide tooltip
-      setState(null);
+      setContent(null);
     }
   }));
 
+  // Measure after the tooltip has rendered (so its real size is known),
+  // then position it - runs once per show(), since pos starts null.
   useLayoutEffect(() => {
-    if (state && !state.ready && elRef.current) {
-      const tooltipRect = elRef.current.getBoundingClientRect();
-      const { targetRect } = state;
+    if (!content || pos || !tooltipRef.current || !targetElRef.current) return;
 
-      let left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
-      left = Math.max(
-        8,
-        Math.min(left, window.innerWidth - tooltipRect.width - 8)
-      );
+    const targetRect = targetElRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-      const top = Math.max(8, targetRect.top - tooltipRect.height - 10);
+    const left = Math.max(
+      MARGIN,
+      Math.min(
+        targetRect.left + targetRect.width / 2 - tooltipRect.width / 2,
+        window.innerWidth - tooltipRect.width - MARGIN
+      )
+    );
+    const top = Math.max(MARGIN, targetRect.top - tooltipRect.height - 10);
 
-      // Trigger final placement and fade in
-      setState((prev) => ({ ...prev, top, left, ready: true }));
-    }
-  }, [state]);
+    setPos({ top, left });
+  }, [content, pos]);
 
-  if (!state) return null; //Skip if not hovered on
+  if (!content) return null;
 
-  const { annotation, isTimestamp, top, left, ready } = state;
-
+  const { annotation, isTimestamp } = content;
   const timeLabel = isTimestamp
     ? formatTime(annotation.start)
     : `${formatTime(annotation.start)} - ${formatTime(annotation.end)}`;
 
   return createPortal(
     <div
-      ref={elRef}
+      ref={tooltipRef}
       className="fixed z-[9999] max-w-[240px] rounded-lg bg-neutral text-neutral-content text-xs shadow-xl px-3 py-2 pointer-events-none transition-opacity duration-150 ease-out"
       style={{
-        top: `${top}px`,
-        left: `${left}px`,
-        opacity: ready ? 1 : 0,
-        // Prevent layout shift on initial render
-        visibility: ready ? "visible" : "hidden"
+        top: pos?.top ?? 0,
+        left: pos?.left ?? 0,
+        opacity: pos ? 1 : 0,
+        visibility: pos ? "visible" : "hidden"
       }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -84,6 +79,7 @@ export const AnnotationTooltip = forwardRef(({ userNames = {} }, ref) => {
           </span>
         )}
       </div>
+
       {annotation.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
           {annotation.tags.map((tag) => (
