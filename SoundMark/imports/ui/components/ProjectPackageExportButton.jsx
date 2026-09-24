@@ -6,32 +6,36 @@ import { exportProjectPackage } from "../services/projectPackageService";
  * annotations, so the project can be reloaded later (see UploadPage's
  * "Import a project package").
  */
-export const ProjectPackageExportButton = ({ fileId, annotations }) => {
-  const [isExporting, setIsExporting] = useState(false);
+export const ProjectPackageExportButton = ({
+	fileId,
+	annotations,
+	effects
+}) => {
+	const [isExporting, setIsExporting] = useState(false);
 
-  const handleExport = async () => {
-    if (isExporting) return;
+	const handleExport = async () => {
+		if (isExporting) return;
 
-    setIsExporting(true);
+		setIsExporting(true);
 
-    try {
-      await exportProjectPackage({ fileId, annotations });
-    } catch (error) {
-      console.error("Project package export failed:", error);
-      window.alert("Could not export the project package.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
+		try {
+			await exportProjectPackage({ fileId, annotations, effects });
+		} catch (error) {
+			console.error("Project package export failed:", error);
+			window.alert("Could not export the project package.");
+		} finally {
+			setIsExporting(false);
+		}
+	};
 
-  return (
-    <button
-      type="button"
-      className="btn btn-outline btn-sm"
-      disabled={isExporting}
-      onClick={handleExport}
-    >
-      {isExporting ? "Packaging…" : "Export project"}
-    </button>
-  );
+	return (
+		<button
+			type="button"
+			className="btn btn-outline btn-sm"
+			disabled={isExporting}
+			onClick={handleExport}
+		>
+			{isExporting ? "Packaging…" : "Export project"}
+		</button>
+	);
 };

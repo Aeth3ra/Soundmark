@@ -399,6 +399,7 @@ export const PlayerPage = () => {
 								<ProjectPackageExportButton
 									fileId={fileId}
 									annotations={annotations}
+									effects={effects}
 								/>
 
 								<button
