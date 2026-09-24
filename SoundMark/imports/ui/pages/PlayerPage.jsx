@@ -19,7 +19,14 @@ import { useAnnotationAnalysis } from "../hooks/useAnnotationAnalysis";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl } from "../services/audioService";
-import { ChevronLeft, Link2, Check, ListMusic, Crown } from "lucide-react";
+import {
+	ChevronLeft,
+	Link2,
+	Check,
+	ListMusic,
+	Crown,
+	Wand2
+} from "lucide-react";
 import { AnnotationList } from "../components/annotations/AnnotationList";
 import { AnnotationTooltip } from "../components/annotations/AnnotationToolTip";
 import { AnnotationMarkersLayer } from "../components/annotations/AnnotationMarkersLayer";
@@ -64,7 +71,7 @@ export const PlayerPage = () => {
 	// Tags currently used to filter the annotation list
 	const toggleTagFilter = (tag) => {
 		setSelectedTags((prev) =>
-			prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+			prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
 		);
 	};
 	const clearTagFilters = () => setSelectedTags([]);
@@ -84,9 +91,9 @@ export const PlayerPage = () => {
 	const identity = useMemo(
 		() => ({
 			userId,
-			name,
+			name
 		}),
-		[userId, name],
+		[userId, name]
 	);
 
 	// Tracks who's hosting this file's session, and whether that host has
@@ -128,10 +135,13 @@ export const PlayerPage = () => {
 	const effects = useTracker(() => {
 		return EffectsCollection.find(
 			{ fileId },
-			{ sort: { order: 1, createdAt: 1, _id: 1 } },
+			{ sort: { order: 1, createdAt: 1, _id: 1 } }
 		).fetch();
 	}, [fileId]);
-	const nextEffectOrder = effects.reduce((next, effect) => Math.max(next, effect.order + 1), 0);
+	const nextEffectOrder = effects.reduce(
+		(next, effect) => Math.max(next, effect.order + 1),
+		0
+	);
 
 	// Load wavesurfer
 	const {
@@ -155,26 +165,33 @@ export const PlayerPage = () => {
 		isAudioReady,
 		audioError,
 		audioVersion,
-		retryAudio,
+		retryAudio
 	} = useWavesurfer(audioUrl, effects, !isEffectsLoading());
 
 	// Load regions plugin for wavesurfer
 	const regionsPlugin = useRegionsPlugin(wavesurferInstance);
 	const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
-	const regionAnalysis = useRegionAnalysis(wavesurferInstance, activeRegion, audioVersion);
+	const regionAnalysis = useRegionAnalysis(
+		wavesurferInstance,
+		activeRegion,
+		audioVersion
+	);
 
 	useZoomPlugin(wavesurferInstance);
 
 	// Subscribes to annotation collection for the current file
 	const isAnnotationsLoading = useSubscribe("annotations.forFile", fileId);
 	const annotations = useTracker(() => {
-		return AnnotationsCollection.find({ fileId }, { sort: { start: 1 } }).fetch();
+		return AnnotationsCollection.find(
+			{ fileId },
+			{ sort: { start: 1 } }
+		).fetch();
 	}, [fileId]);
 	const annotationAnalyses = useAnnotationAnalysis(
 		wavesurferInstance,
 		annotations,
 		isAnnotateListOpen,
-		audioVersion,
+		audioVersion
 	);
 
 	// Subscribes to the display names of everyone who has authored an
@@ -189,11 +206,17 @@ export const PlayerPage = () => {
 		position: currentTime,
 		playbackRate,
 		isPlaying,
-		followingUserId,
+		followingUserId
 	});
 
 	//For playhead sync
-	const { targetUser, syncError, clearSyncError, stopFollowing, toggleFollow } = useWaveformSync({
+	const {
+		targetUser,
+		syncError,
+		clearSyncError,
+		stopFollowing,
+		toggleFollow
+	} = useWaveformSync({
 		duration,
 		otherUsers,
 		currentUserId: identity?.userId,
@@ -205,7 +228,7 @@ export const PlayerPage = () => {
 		pause,
 		isPlaying,
 		playbackRate,
-		setPlaybackRate,
+		setPlaybackRate
 	});
 
 	// userId -> display name, for showing "who made this" on annotation cards
@@ -235,13 +258,20 @@ export const PlayerPage = () => {
 	if (audioMissing) {
 		return (
 			<div className="h-screen flex flex-col items-center justify-center gap-4 bg-base-300 px-6 text-center">
-				<img src="/icon-512.png" alt="SoundMark logo" className="h-10 w-10 opacity-70" />
+				<img
+					src="/icon-512.png"
+					alt="SoundMark logo"
+					className="h-10 w-10 opacity-70"
+				/>
 				<h1 className="text-xl font-bold">This session has ended</h1>
 				<p className="text-base-content/60 text-sm max-w-sm">
-					The audio for this session is no longer available. It may have been removed
-					after the host ended things.
+					The audio for this session is no longer available. It may
+					have been removed after the host ended things.
 				</p>
-				<button onClick={() => navigate("/")} className="btn btn-primary btn-sm">
+				<button
+					onClick={() => navigate("/")}
+					className="btn btn-primary btn-sm"
+				>
 					Back to home
 				</button>
 			</div>
@@ -254,12 +284,19 @@ export const PlayerPage = () => {
 			{/* Top header: logo + back/share */}
 			<header className="flex items-center justify-between px-6 py-4 border-b border-base-300 bg-base-100">
 				<div className="flex items-center gap-3">
-					<button onClick={() => navigate("/")} className="btn btn-ghost btn-sm gap-2">
+					<button
+						onClick={() => navigate("/")}
+						className="btn btn-ghost btn-sm gap-2"
+					>
 						<ChevronLeft className="h-4 w-4" />
 						Back
 					</button>
 					<div className="w-px h-5 bg-base-300 mx-1" />
-					<img src="/icon-512.png" alt="SoundMark logo" className="h-6 w-6" />
+					<img
+						src="/icon-512.png"
+						alt="SoundMark logo"
+						className="h-6 w-6"
+					/>
 					<span className="text-lg font-bold">Soundmark</span>
 				</div>
 				<div className="flex items-center gap-3">
@@ -274,10 +311,16 @@ export const PlayerPage = () => {
 						</span>
 					)}
 					{/* Workspace users */}
-					<WorkspaceUsers currentUser={identity} otherUsers={otherUsers} />
+					<WorkspaceUsers
+						currentUser={identity}
+						otherUsers={otherUsers}
+					/>
 
 					{/* Share button */}
-					<button onClick={handleShare} className="btn btn-outline btn-sm gap-2">
+					<button
+						onClick={handleShare}
+						className="btn btn-outline btn-sm gap-2"
+					>
 						{copied ? (
 							<>
 								<Check className="h-4 w-4" />
@@ -300,17 +343,25 @@ export const PlayerPage = () => {
 					{!audioUrl ? (
 						<div className="flex-1 flex flex-col items-center justify-center gap-4">
 							<span className="loading loading-spinner loading-lg text-primary"></span>
-							<p className="text-base-content/60 text-sm">Loading audio...</p>
+							<p className="text-base-content/60 text-sm">
+								Loading audio...
+							</p>
 						</div>
 					) : (
 						<>
 							{isProcessing && (
-								<p role="status" className="px-6 py-2 text-sm text-base-content/60">
+								<p
+									role="status"
+									className="px-6 py-2 text-sm text-base-content/60"
+								>
 									Updating audio preview…
 								</p>
 							)}
 							{audioError && (
-								<div role="alert" className="alert alert-error mx-6 my-2">
+								<div
+									role="alert"
+									className="alert alert-error mx-6 my-2"
+								>
 									<span>{audioError}</span>
 									<button
 										type="button"
@@ -360,7 +411,9 @@ export const PlayerPage = () => {
 									<ListMusic className="h-4 w-4" />
 									Annotations
 									{annotations.length > 0 && (
-										<span className="badge badge-sm">{annotations.length}</span>
+										<span className="badge badge-sm">
+											{annotations.length}
+										</span>
 									)}
 								</button>
 
@@ -372,9 +425,12 @@ export const PlayerPage = () => {
 									}}
 									className={`btn btn-sm gap-2 ${isEffectsListOpen ? "btn-primary" : "btn-outline"}`}
 								>
+									<Wand2 className="h-4 w-4" />
 									Effects
 									{effects.length > 0 && (
-										<span className="badge badge-sm">{effects.length}</span>
+										<span className="badge badge-sm">
+											{effects.length}
+										</span>
 									)}
 								</button>
 							</div>
@@ -388,7 +444,11 @@ export const PlayerPage = () => {
 									<div className="bg-base-200/40 rounded-box flex-1 p-4">
 										<WaveformDisplay
 											containerRef={containerRef}
-											wavesurferInstance={wavesurferInstance}
+											wavesurferInstance={
+												wavesurferInstance
+											}
+											effects={effects}
+											currentTime={currentTime}
 											duration={duration}
 											otherUsers={otherUsers}
 											followingUserId={followingUserId}
@@ -413,13 +473,18 @@ export const PlayerPage = () => {
 										openAnnotation(
 											activeRegion
 												? {
-														startMs: activeRegion.start * 1000,
-														endMs: activeRegion.end * 1000,
+														startMs:
+															activeRegion.start *
+															1000,
+														endMs:
+															activeRegion.end *
+															1000
 													}
 												: {
-														startMs: currentTime * 1000,
-														endMs: null,
-													},
+														startMs:
+															currentTime * 1000,
+														endMs: null
+													}
 										);
 									}}
 									className="btn btn-sm btn-outline gap-2"
@@ -441,7 +506,7 @@ export const PlayerPage = () => {
 
 										if (!activeRegion) {
 											setEffectActionError(
-												"Select a region on the waveform before applying an effect.",
+												"Select a region on the waveform before applying an effect."
 											);
 											return;
 										}
@@ -452,7 +517,7 @@ export const PlayerPage = () => {
 										setEffectRegion({
 											fileId,
 											start: activeRegion.start,
-											end: activeRegion.end,
+											end: activeRegion.end
 										});
 
 										setIsEffectsListOpen(true);
@@ -479,7 +544,10 @@ export const PlayerPage = () => {
 								/>
 
 								{effectActionError && (
-									<p role="alert" className="text-error text-sm">
+									<p
+										role="alert"
+										className="text-error text-sm"
+									>
 										{effectActionError}
 									</p>
 								)}
@@ -541,13 +609,20 @@ export const PlayerPage = () => {
 			/>
 
 			{/* Annotation Marker on top of the annotation regions/timestamps */}
-			<AnnotationMarkersLayer markerSlots={markerSlots} tooltipRef={tooltipRef} />
+			<AnnotationMarkersLayer
+				markerSlots={markerSlots}
+				tooltipRef={tooltipRef}
+			/>
 
 			{/* Annotation tool tip upon hover */}
 			<AnnotationTooltip ref={tooltipRef} userNames={userNames} />
 
 			{/* Render the generic toast at the bottom of the page */}
-			<ToastError message={syncError} onClose={clearSyncError} autoDismissMs={5000} />
+			<ToastError
+				message={syncError}
+				onClose={clearSyncError}
+				autoDismissMs={5000}
+			/>
 		</div>
 	);
 };
