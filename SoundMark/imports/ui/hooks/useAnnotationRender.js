@@ -23,7 +23,7 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
 		drawnRef.current.forEach((waveRegion, id) => {
 			slots.push({
 				id,
-				slotElement: waveRegion.element, // the empty box wavesurfer created
+				slotElement: waveRegion.__mount,
 				annotation: waveRegion.__annotation,
 				isTimestamp: waveRegion.__isTimestamp,
 				region: waveRegion
@@ -60,11 +60,10 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
 				return;
 			}
 
-			// Update in place
+			// Same kind as before: update in place
 			const currentEnd = isTimestamp ? annotation.start : annotation.end;
 			const newColour = regionColour(annotation, isTimestamp);
 
-			// Update if times changes
 			if (
 				existing.start !== annotation.start ||
 				existing.end !== currentEnd
@@ -74,7 +73,6 @@ export const useAnnotationRender = (regionsPlugin, annotations) => {
 					end: currentEnd
 				});
 			}
-			// Update colour if colour has changed
 			if (existing.color !== newColour) {
 				existing.setOptions({ color: newColour });
 			}
@@ -117,6 +115,16 @@ const createRegion = (regionsPlugin, annotation) => {
 
 	waveRegion.__annotation = annotation;
 	waveRegion.__isTimestamp = isTimestamp;
+
+	// React renders into a node it owns, not into wavesurfer's own element.
+	// Wavesurfer can remove, clear or rebuild its elements at any time, and
+	// React then can't find its children to remove them (removeChild error).
+	// display: contents means the mount adds no box, so layout is unchanged.
+	const mount = document.createElement("div");
+	mount.style.display = "contents";
+	waveRegion.element.appendChild(mount);
+	waveRegion.__mount = mount;
+
 	return waveRegion;
 };
 
