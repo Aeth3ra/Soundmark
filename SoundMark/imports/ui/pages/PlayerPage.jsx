@@ -41,6 +41,7 @@ import { WaveformDisplay } from "../components/waveform/WaveformDisplay";
 import { useWaveformSync } from "../hooks/useWaveformSync";
 import { SyncStatusToggle } from "../components/SyncStatusToggle";
 import { ToastError } from "../components/ToastError";
+import { ScrubBar } from "../components/waveform/ScrubBar";
 
 export const PlayerPage = () => {
 	const { fileId } = useParams();
@@ -446,6 +447,15 @@ export const PlayerPage = () => {
 							>
 								<div className="bg-base-100 rounded-box shadow-xl p-6 flex flex-col">
 									<div className="bg-base-200/40 rounded-box flex-1 p-4">
+										<ScrubBar
+											duration={duration}
+											currentTime={currentTime}
+											seekTo={seekTo}
+											wavesurferInstance={
+												wavesurferInstance
+											}
+											disabled={!isAudioReady}
+										/>
 										<WaveformDisplay
 											containerRef={containerRef}
 											wavesurferInstance={
