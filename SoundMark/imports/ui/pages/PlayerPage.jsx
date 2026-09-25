@@ -390,7 +390,11 @@ export const PlayerPage = () => {
 									onVolumeChange={setVolume}
 									onZoomChange={setZoom}
 								/>
-
+								{/* Region time display */}
+								<RegionSelectionDisplay
+									activeRegion={activeRegion}
+									analysis={regionAnalysis}
+								/>
 								<div className="flex-1" />
 								<SyncStatusToggle
 									targetUser={targetUser}
@@ -471,12 +475,6 @@ export const PlayerPage = () => {
 									</div>
 								</div>
 							</div>
-
-							{/* Region time display */}
-							<RegionSelectionDisplay
-								activeRegion={activeRegion}
-								analysis={regionAnalysis}
-							/>
 
 							{/* Region selection actions */}
 							<div className="flex items-center gap-2 self-start ml-6 mb-4">
