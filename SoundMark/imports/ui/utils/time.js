@@ -6,13 +6,15 @@ export const formatMs = (ms, { millis = false } = {}) => {
 	return millis ? `${base}.${String(total % 1000).padStart(3, "0")}` : base;
 };
 
-export const formatTime = (sec) => {
+export const formatTime = (sec, { millis = false } = {}) => {
 	if (!isFinite(sec)) return "0:00";
-	const m = Math.floor(sec / 60);
-	const s = Math.floor(sec % 60)
-		.toString()
-		.padStart(2, "0");
-	return `${m}:${s}`;
+
+	const total = millis ? Math.round(sec * 1000) : Math.floor(sec * 1000);
+	const minutes = Math.floor(total / 60000);
+	const seconds = Math.floor((total % 60000) / 1000);
+	const base = `${minutes}:${String(seconds).padStart(2, "0")}`;
+
+	return millis ? `${base}.${String(total % 1000).padStart(3, "0")}` : base;
 };
 
 export const msToSeconds = (ms) => (ms == null ? null : ms / 1000);
