@@ -255,6 +255,18 @@ export const PlayerPage = () => {
 		if (duration > 0) seekTo(seconds / duration);
 	};
 
+	// Toggles the Annotations panel open/closed, always closing the Effects
+	// panel first — the two rail buttons act as one mutually-exclusive pair.
+	const toggleAnnotationsPanel = () => {
+		setIsAnnotateListOpen((open) => !open);
+		setIsEffectsListOpen(false);
+	};
+
+	const toggleEffectsPanel = () => {
+		setIsEffectsListOpen((open) => !open);
+		setIsAnnotateListOpen(false);
+	};
+
 	// Session is over screen
 	if (audioMissing) {
 		return (
@@ -337,10 +349,11 @@ export const PlayerPage = () => {
 				</div>
 			</header>
 
-			{/* Main area: player (left) + annotations sidebar  */}
+			{/* Main area: player (left) + panel rail + annotations/effects sidebar */}
 			<div className="flex-1 flex overflow-hidden">
-				{/* Player column */}
-				<div className="flex-1 flex flex-col overflow-y-auto">
+				{/* Player column. min-w-0 lets it actually shrink to make room
+				    for the sidebar/rail instead of overflowing the page. */}
+				<div className="flex-1 flex flex-col overflow-y-auto min-w-0">
 					{!audioUrl ? (
 						<div className="flex-1 flex flex-col items-center justify-center gap-4">
 							<span className="loading loading-spinner loading-lg text-primary"></span>
@@ -374,74 +387,45 @@ export const PlayerPage = () => {
 								</div>
 							)}
 							{/* Toolbar  */}
-							<div className="flex items-center gap-6 px-6 py-3 border-b border-base-300 bg-base-100">
-								<PlayerControls
-									key={fileId}
-									disabled={!isAudioReady}
-									isPlaying={isPlaying}
-									isLooping={isLooping}
-									playbackRate={playbackRate}
-									currentTime={currentTime}
-									duration={duration}
-									zoom={zoom}
-									onPlayPause={playPause}
-									onToggleLoop={toggleLoop}
-									onPlaybackRateChange={setPlaybackRate}
-									onVolumeChange={setVolume}
-									onZoomChange={setZoom}
-								/>
+							<div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 border-b border-base-300 bg-base-100">
+								<div className="shrink-0">
+									<PlayerControls
+										key={fileId}
+										disabled={!isAudioReady}
+										isPlaying={isPlaying}
+										isLooping={isLooping}
+										playbackRate={playbackRate}
+										currentTime={currentTime}
+										duration={duration}
+										zoom={zoom}
+										onPlayPause={playPause}
+										onToggleLoop={toggleLoop}
+										onPlaybackRateChange={setPlaybackRate}
+										onVolumeChange={setVolume}
+										onZoomChange={setZoom}
+									/>
+								</div>
 								{/* Region time display */}
 								<RegionSelectionDisplay
 									activeRegion={activeRegion}
 									analysis={regionAnalysis}
 								/>
 								<div className="flex-1" />
-								<SyncStatusToggle
-									targetUser={targetUser}
-									onUnlock={stopFollowing}
-								/>
-								<AudioExportButton
-									fileId={fileId}
-									effects={effects}
-								/>
-								<ProjectPackageExportButton
-									fileId={fileId}
-									annotations={annotations}
-									effects={effects}
-								/>
-
-								<button
-									onClick={() => {
-										setIsAnnotateListOpen((open) => !open);
-										setIsEffectsListOpen(false);
-									}}
-									className={`btn btn-sm gap-2 ${isAnnotateListOpen ? "btn-primary" : "btn-outline"}`}
-								>
-									<ListMusic className="h-4 w-4" />
-									Annotations
-									{annotations.length > 0 && (
-										<span className="badge badge-sm">
-											{annotations.length}
-										</span>
-									)}
-								</button>
-
-								<button
-									type="button"
-									onClick={() => {
-										setIsEffectsListOpen((open) => !open);
-										setIsAnnotateListOpen(false);
-									}}
-									className={`btn btn-sm gap-2 ${isEffectsListOpen ? "btn-primary" : "btn-outline"}`}
-								>
-									<Wand2 className="h-4 w-4" />
-									Effects
-									{effects.length > 0 && (
-										<span className="badge badge-sm">
-											{effects.length}
-										</span>
-									)}
-								</button>
+								<div className="flex shrink-0 items-center gap-6">
+									<SyncStatusToggle
+										targetUser={targetUser}
+										onUnlock={stopFollowing}
+									/>
+									<AudioExportButton
+										fileId={fileId}
+										effects={effects}
+									/>
+									<ProjectPackageExportButton
+										fileId={fileId}
+										annotations={annotations}
+										effects={effects}
+									/>
+								</div>
 							</div>
 
 							{/* Waveform  */}
@@ -566,6 +550,41 @@ export const PlayerPage = () => {
 							</div>
 						</>
 					)}
+				</div>
+
+				{/* Panel rail: toggles for the Annotations / Effects sidebar*/}
+				<div className="flex shrink-0 flex-col items-center gap-2 w-14 border-l border-base-300 bg-base-100 py-3">
+					<button
+						type="button"
+						onClick={toggleAnnotationsPanel}
+						className={`btn btn-sm btn-square relative ${isAnnotateListOpen ? "btn-primary" : "btn-ghost"}`}
+						title="Annotations"
+						aria-pressed={isAnnotateListOpen}
+						aria-label="Toggle annotations panel"
+					>
+						<ListMusic className="h-4 w-4" />
+						{annotations.length > 0 && (
+							<span className="badge badge-sm absolute -top-1.5 -right-1.5 px-1">
+								{annotations.length}
+							</span>
+						)}
+					</button>
+
+					<button
+						type="button"
+						onClick={toggleEffectsPanel}
+						className={`btn btn-sm btn-square relative ${isEffectsListOpen ? "btn-primary" : "btn-ghost"}`}
+						title="Effects"
+						aria-pressed={isEffectsListOpen}
+						aria-label="Toggle effects panel"
+					>
+						<Wand2 className="h-4 w-4" />
+						{effects.length > 0 && (
+							<span className="badge badge-sm absolute -top-1.5 -right-1.5 px-1">
+								{effects.length}
+							</span>
+						)}
+					</button>
 				</div>
 
 				{/* Annotations sidebar */}
