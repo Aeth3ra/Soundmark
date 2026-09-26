@@ -23,7 +23,7 @@ export const PlayerControls = ({
 	return (
 		<fieldset
 			disabled={disabled}
-			className="flex shrink-0 items-center gap-4"
+			className="flex flex-wrap items-center gap-4"
 		>
 			{/* Play / Pause */}
 			<button

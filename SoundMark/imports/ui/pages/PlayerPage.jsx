@@ -351,8 +351,7 @@ export const PlayerPage = () => {
 
 			{/* Main area: player (left) + panel rail + annotations/effects sidebar */}
 			<div className="flex-1 flex overflow-hidden">
-				{/* Player column. min-w-0 lets it actually shrink to make room
-				    for the sidebar/rail instead of overflowing the page. */}
+				{/* Player column */}
 				<div className="flex-1 flex flex-col overflow-y-auto min-w-0">
 					{!audioUrl ? (
 						<div className="flex-1 flex flex-col items-center justify-center gap-4">
@@ -388,23 +387,21 @@ export const PlayerPage = () => {
 							)}
 							{/* Toolbar  */}
 							<div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 border-b border-base-300 bg-base-100">
-								<div className="shrink-0">
-									<PlayerControls
-										key={fileId}
-										disabled={!isAudioReady}
-										isPlaying={isPlaying}
-										isLooping={isLooping}
-										playbackRate={playbackRate}
-										currentTime={currentTime}
-										duration={duration}
-										zoom={zoom}
-										onPlayPause={playPause}
-										onToggleLoop={toggleLoop}
-										onPlaybackRateChange={setPlaybackRate}
-										onVolumeChange={setVolume}
-										onZoomChange={setZoom}
-									/>
-								</div>
+								<PlayerControls
+									key={fileId}
+									disabled={!isAudioReady}
+									isPlaying={isPlaying}
+									isLooping={isLooping}
+									playbackRate={playbackRate}
+									currentTime={currentTime}
+									duration={duration}
+									zoom={zoom}
+									onPlayPause={playPause}
+									onToggleLoop={toggleLoop}
+									onPlaybackRateChange={setPlaybackRate}
+									onVolumeChange={setVolume}
+									onZoomChange={setZoom}
+								/>
 								{/* Region time display */}
 								<RegionSelectionDisplay
 									activeRegion={activeRegion}
