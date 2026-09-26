@@ -220,3 +220,47 @@ export function defaultFieldValues(type) {
 		])
 	);
 }
+
+/**
+ * Maps raw parameter keys to human-readable labels.
+ */
+const PARAM_LABELS = {
+	targetPeakDb: "Target Peak",
+	gainDb: "Gain",
+	semitones: "Pitch Shift",
+	filterType: "Type",
+	frequency: "Frequency"
+};
+
+/**
+ * Returns a nicely formatted string for a given effect parameter value.
+ * e.g., adding "dB", "Hz", or "+/-" signs.
+ */
+export const formatParamValue = (key, value) => {
+	if (value == null) return "N/A";
+
+	switch (key) {
+		case "targetPeakDb":
+			return `${value} dB`;
+		case "gainDb":
+			return `${value > 0 ? "+" : ""}${value} dB`;
+		case "semitones":
+			return `${value > 0 ? "+" : ""}${value} semitones`;
+		case "filterType":
+			// Capitalize the first letter and format common types
+			if (value === "lowpass") return "Low-pass";
+			if (value === "highpass") return "High-pass";
+			return String(value);
+		case "frequency":
+			return `${value} Hz`;
+		default:
+			return String(value);
+	}
+};
+
+/**
+ * Formats the parameter key into a readable label.
+ */
+export const formatParamLabel = (key) => {
+	return PARAM_LABELS[key] || key;
+};

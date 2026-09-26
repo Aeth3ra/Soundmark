@@ -42,8 +42,10 @@ const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 // Shortcuts should never hijack typing into a text field, a search box,
 // an annotation/effect form, etc.
 export const isTypingTarget = (target) =>
-	Boolean(target) &&
-	(EDITABLE_TAGS.has(target.tagName) || target.isContentEditable);
+	Boolean(
+		target &&
+		(EDITABLE_TAGS.has(target.tagName) || target.isContentEditable)
+	);
 
 /**
  * Fires `handler` when `combo` (e.g. "mod+a") is pressed.

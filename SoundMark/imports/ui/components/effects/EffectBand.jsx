@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { formatParamLabel, formatParamValue } from "../../lib/effectTypes";
 
 // One color per effect type - matches EFFECT_HANDLERS keys. Extend as you
 // add handlers. Falls back to a neutral grey for anything unrecognized so
@@ -83,7 +84,8 @@ export const EffectBand = ({ slot }) => {
 						{Object.entries(effect.params ?? {}).map(
 							([key, value]) => (
 								<div key={key} className="opacity-80">
-									{key}: {String(value)}
+									{formatParamLabel(key)}:{" "}
+									{formatParamValue(key, value)}
 								</div>
 							)
 						)}

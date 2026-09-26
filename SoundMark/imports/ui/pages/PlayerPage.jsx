@@ -338,9 +338,7 @@ export const PlayerPage = () => {
 		isAudioReady &&
 		!effectRegion;
 
-	// Keyboard shortcuts for the region selection actions above. Each
-	// `enabled` condition mirrors the matching button's `disabled` logic,
-	// so a shortcut never fires when its button couldn't have been clicked.
+	// Keyboard shortcuts for the region selection actions above.
 	useKeyboardShortcut("mod+a", handleCreateAnnotation, {
 		enabled: isAudioReady
 	});
