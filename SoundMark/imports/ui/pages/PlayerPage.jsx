@@ -6,7 +6,8 @@ import { ProjectPackageExportButton } from "../components/ProjectPackageExportBu
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
 import { EffectForm } from "../components/effects/EffectForm";
 import { EffectList } from "../components/effects/EffectList";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useKeyboardShortcut } from "../hooks/useKeyboardShortcut";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
 import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
 import { EffectsCollection } from "../../api/effects/effectsCollection";
@@ -267,6 +268,70 @@ export const PlayerPage = () => {
 		setIsAnnotateListOpen(false);
 	};
 
+	// Opens the annotation form for the current selection, or the current
+	// playhead position if nothing is selected.
+	const handleCreateAnnotation = useCallback(() => {
+		setEffectRegion(null);
+		setEditingAnnotation(null);
+		openAnnotation(
+			activeRegion
+				? {
+						startMs: activeRegion.start * 1000,
+						endMs: activeRegion.end * 1000
+					}
+				: {
+						startMs: currentTime * 1000,
+						endMs: null
+					}
+		);
+	}, [activeRegion, currentTime, openAnnotation]);
+
+	// Opens the effect form for the current selection.
+	const handleApplyEffect = useCallback(() => {
+		setEffectActionError(null);
+
+		if (!activeRegion) {
+			setEffectActionError(
+				"Select a region on the waveform before applying an effect."
+			);
+			return;
+		}
+
+		closeAnnotation();
+		setEditingAnnotation(null);
+		// Copy the times so changes to the selection do not move this form's target.
+		setEffectRegion({
+			fileId,
+			start: activeRegion.start,
+			end: activeRegion.end
+		});
+	}, [activeRegion, closeAnnotation, fileId]);
+
+	// Deletes/clears the current region selection.
+	const handleDeleteRegion = useCallback(() => {
+		clearRegion();
+	}, [clearRegion]);
+
+	const canApplyEffect =
+		Boolean(userId) &&
+		duration > 0 &&
+		!isEffectsLoading() &&
+		isAudioReady &&
+		!effectRegion;
+
+	// Keyboard shortcuts for the region selection actions above. Each
+	// `enabled` condition mirrors the matching button's `disabled` logic,
+	// so a shortcut never fires when its button couldn't have been clicked.
+	useKeyboardShortcut("mod+a", handleCreateAnnotation, {
+		enabled: isAudioReady
+	});
+	useKeyboardShortcut("mod+d", handleDeleteRegion, {
+		enabled: isAudioReady && Boolean(activeRegion)
+	});
+	useKeyboardShortcut("mod+e", handleApplyEffect, {
+		enabled: canApplyEffect
+	});
+
 	// Session is over screen
 	if (audioMissing) {
 		return (
@@ -460,71 +525,28 @@ export const PlayerPage = () => {
 							{/* Region selection actions */}
 							<div className="flex items-center gap-2 self-start ml-6 mb-4">
 								<button
-									onClick={() => {
-										setEffectRegion(null);
-										setEditingAnnotation(null);
-										openAnnotation(
-											activeRegion
-												? {
-														startMs:
-															activeRegion.start *
-															1000,
-														endMs:
-															activeRegion.end *
-															1000
-													}
-												: {
-														startMs:
-															currentTime * 1000,
-														endMs: null
-													}
-										);
-									}}
+									onClick={handleCreateAnnotation}
 									className="btn btn-sm btn-outline gap-2"
+									title="Create annotation (Ctrl/Cmd+A)"
 								>
 									Create annotation
 								</button>
 
 								<button
 									type="button"
-									disabled={
-										!userId ||
-										duration <= 0 ||
-										isEffectsLoading() ||
-										!isAudioReady ||
-										Boolean(effectRegion)
-									}
-									onClick={() => {
-										setEffectActionError(null);
-
-										if (!activeRegion) {
-											setEffectActionError(
-												"Select a region on the waveform before applying an effect."
-											);
-											return;
-										}
-
-										closeAnnotation();
-										setEditingAnnotation(null);
-										// Copy the times so changes to the selection do not move this form's target.
-										setEffectRegion({
-											fileId,
-											start: activeRegion.start,
-											end: activeRegion.end
-										});
-
-										setIsEffectsListOpen(true);
-										setIsAnnotateListOpen(false);
-									}}
+									disabled={!canApplyEffect}
+									onClick={handleApplyEffect}
 									className="btn btn-sm btn-outline"
+									title="Apply effect (Ctrl/Cmd+E)"
 								>
 									Apply effect
 								</button>
 
 								<button
-									onClick={clearRegion}
+									onClick={handleDeleteRegion}
 									disabled={!activeRegion}
 									className="btn btn-sm btn-outline gap-2"
+									title="Clear region (Ctrl/Cmd+D)"
 								>
 									Clear region
 								</button>
