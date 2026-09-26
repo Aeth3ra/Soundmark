@@ -8,6 +8,8 @@ import { EffectForm } from "../components/effects/EffectForm";
 import { EffectList } from "../components/effects/EffectList";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useKeyboardShortcut } from "../hooks/useKeyboardShortcut";
+import { useRegionContextMenu } from "../hooks/useRegionContextMenu";
+import { RegionContextMenu } from "../components/RegionContextMenu";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
 import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
 import { EffectsCollection } from "../../api/effects/effectsCollection";
@@ -20,6 +22,7 @@ import { useAnnotationAnalysis } from "../hooks/useAnnotationAnalysis";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl } from "../services/audioService";
+import { deleteAnnotation } from "../services/annotationService";
 import {
 	ChevronLeft,
 	Link2,
@@ -43,6 +46,7 @@ import { useWaveformSync } from "../hooks/useWaveformSync";
 import { SyncStatusToggle } from "../components/SyncStatusToggle";
 import { ToastError } from "../components/ToastError";
 import { ScrubBar } from "../components/waveform/ScrubBar";
+import { buildRegionMenuItems } from "../lib/regionMenuItem";
 
 export const PlayerPage = () => {
 	const { fileId } = useParams();
@@ -173,6 +177,8 @@ export const PlayerPage = () => {
 	// Load regions plugin for wavesurfer
 	const regionsPlugin = useRegionsPlugin(wavesurferInstance);
 	const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
+	const { menuState: regionMenuState, close: closeRegionMenu } =
+		useRegionContextMenu(regionsPlugin);
 	const regionAnalysis = useRegionAnalysis(
 		wavesurferInstance,
 		activeRegion,
@@ -311,6 +317,19 @@ export const PlayerPage = () => {
 	const handleDeleteRegion = useCallback(() => {
 		clearRegion();
 	}, [clearRegion]);
+
+	// Opens the annotation form in edit mode.
+	const handleEditAnnotation = useCallback((annotation) => {
+		setEffectRegion(null);
+		setEditingAnnotation(annotation);
+	}, []);
+
+	// Deletes a persisted annotation.
+	const handleDeleteAnnotation = useCallback(async (annotation) => {
+		await deleteAnnotation(annotation);
+	}, []);
+
+	const regionMenuAnnotation = regionMenuState?.region?.__annotation ?? null;
 
 	const canApplyEffect =
 		Boolean(userId) &&
@@ -618,10 +637,7 @@ export const PlayerPage = () => {
 					hiddenIds={hiddenAnnotationIds}
 					onToggleHidden={toggleAnnotationHidden}
 					userNames={userNames}
-					onEdit={(annotation) => {
-						setEffectRegion(null);
-						setEditingAnnotation(annotation);
-					}}
+					onEdit={handleEditAnnotation}
 					analyses={annotationAnalyses}
 				/>
 
@@ -666,6 +682,26 @@ export const PlayerPage = () => {
 
 			{/* Annotation tool tip upon hover */}
 			<AnnotationTooltip ref={tooltipRef} userNames={userNames} />
+
+			{/* Right-click menu */}
+			<RegionContextMenu
+				position={regionMenuState}
+				onClose={closeRegionMenu}
+				items={buildRegionMenuItems({
+					annotation: regionMenuAnnotation,
+					isHidden: Boolean(
+						regionMenuAnnotation &&
+						hiddenAnnotationIds.has(regionMenuAnnotation._id)
+					),
+					onToggleHidden: toggleAnnotationHidden,
+					onEdit: handleEditAnnotation,
+					onDelete: handleDeleteAnnotation,
+					onCreateAnnotation: handleCreateAnnotation,
+					onApplyEffect: handleApplyEffect,
+					canApplyEffect,
+					onDeleteRegion: handleDeleteRegion
+				})}
+			/>
 
 			{/* Render the generic toast at the bottom of the page */}
 			<ToastError
