@@ -47,6 +47,9 @@ import { SyncStatusToggle } from "../components/SyncStatusToggle";
 import { ToastError } from "../components/ToastError";
 import { ScrubBar } from "../components/waveform/ScrubBar";
 import { buildRegionMenuItems } from "../lib/regionMenuItem";
+import { getPlaybackEffects } from "../utils/playbackEffects";
+
+const EMPTY_MUTED_EFFECT_IDS = new Set();
 
 export const PlayerPage = () => {
 	const { fileId } = useParams();
@@ -66,6 +69,11 @@ export const PlayerPage = () => {
 	const [selectedTags, setSelectedTags] = useState([]);
 	const [editingAnnotation, setEditingAnnotation] = useState(null);
 	const [followingUserId, setFollowingUserId] = useState(null);
+	const [localEffectMutes, setLocalEffectMutes] = useState({
+		fileId,
+		userId: null,
+		ids: new Set()
+	});
 
 	// A form opened for one file must not carry over to another file.
 	useEffect(() => {
@@ -93,6 +101,23 @@ export const PlayerPage = () => {
 
 	// Get user
 	const { userId, name, isReady } = useGuestAccount();
+	const mutedEffectIds =
+		localEffectMutes.fileId === fileId &&
+		localEffectMutes.userId === userId
+			? localEffectMutes.ids
+			: EMPTY_MUTED_EFFECT_IDS;
+	const toggleLocalEffect = (effectId) => {
+		setLocalEffectMutes((current) => {
+			const ids = new Set(
+				current.fileId === fileId && current.userId === userId
+					? current.ids
+					: []
+			);
+			if (ids.has(effectId)) ids.delete(effectId);
+			else ids.add(effectId);
+			return { fileId, userId, ids };
+		});
+	};
 
 	const identity = useMemo(
 		() => ({
@@ -144,6 +169,10 @@ export const PlayerPage = () => {
 			{ sort: { order: 1, createdAt: 1, _id: 1 } }
 		).fetch();
 	}, [fileId]);
+	const playbackEffects = useMemo(
+		() => getPlaybackEffects(effects, mutedEffectIds, userId),
+		[effects, mutedEffectIds, userId]
+	);
 	const nextEffectOrder = effects.reduce(
 		(next, effect) => Math.max(next, effect.order + 1),
 		0
@@ -172,7 +201,7 @@ export const PlayerPage = () => {
 		audioError,
 		audioVersion,
 		retryAudio
-	} = useWavesurfer(audioUrl, effects, !isEffectsLoading());
+	} = useWavesurfer(audioUrl, playbackEffects, !isEffectsLoading());
 
 	// Load regions plugin for wavesurfer
 	const regionsPlugin = useRegionsPlugin(wavesurferInstance);
@@ -528,7 +557,7 @@ export const PlayerPage = () => {
 											wavesurferInstance={
 												wavesurferInstance
 											}
-											effects={effects}
+											effects={playbackEffects}
 											currentTime={currentTime}
 											duration={duration}
 											otherUsers={otherUsers}
@@ -641,6 +670,9 @@ export const PlayerPage = () => {
 
 				<EffectList
 					effects={effects}
+					mutedEffectIds={mutedEffectIds}
+					onToggleLocalEffect={toggleLocalEffect}
+					userNames={userNames}
 					isOpen={isEffectsListOpen}
 					isLoading={isEffectsLoading()}
 					onClose={() => setIsEffectsListOpen(false)}

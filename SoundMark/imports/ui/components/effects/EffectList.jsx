@@ -8,7 +8,10 @@ export const EffectList = ({
   onClose,
   onSeek,
   userId,
-  isHost
+  isHost,
+  mutedEffectIds,
+  onToggleLocalEffect,
+  userNames
 }) => {
   if (!isOpen) return null;
 
@@ -58,6 +61,9 @@ export const EffectList = ({
                     onSeek={onSeek}
                     userId={userId}
                     isHost={isHost}
+                    locallyMuted={mutedEffectIds.has(effect._id)}
+                    onToggleLocalEffect={onToggleLocalEffect}
+                    creatorName={userNames[effect.createdBy]}
                   />
                 </li>
               ))}

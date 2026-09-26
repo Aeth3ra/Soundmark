@@ -249,6 +249,34 @@ if (Meteor.isClient) {
             );
         });
 
+        it("resumes playback at the same position after a local effect toggle", async function () {
+            const active = { _id: "effect-1", enabled: true };
+            const { rerender } = await renderHook({ effects: [active] });
+
+            await act(async () => {
+                await currentResult.play();
+            });
+            mockWavesurferInstance.play.resetHistory();
+            createPreviewBlobStub.resetHistory();
+
+            rerender(
+                <Wrapper
+                    url="https://example.com/audio.mp3"
+                    effects={[{ ...active, enabled: false }]}
+                />
+            );
+            await flush();
+
+            assert.isTrue(
+                createPreviewBlobStub.calledWith(fakeBuffer, [
+                    { _id: "effect-1", enabled: false }
+                ])
+            );
+            assert.isTrue(mockWavesurferInstance.setTime.calledWith(15));
+            assert.isTrue(mockWavesurferInstance.play.calledOnce);
+            assert.isTrue(currentResult.isAudioReady);
+        });
+
         it("re-runs the preview pipeline without re-fetching the source on retryAudio", async function () {
             await renderHook();
             loadAudioBufferStub.resetHistory();
