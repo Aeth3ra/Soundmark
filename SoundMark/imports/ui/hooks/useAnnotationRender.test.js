@@ -5,64 +5,74 @@ import sinon from "sinon";
 import { useAnnotationRender } from "./useAnnotationRender";
 
 if (Meteor.isClient) {
-  describe("useAnnotationRender", function () {
-    let mockRegionsPlugin;
-    let fakeRegion;
+	describe("useAnnotationRender", function () {
+		let mockRegionsPlugin;
+		let fakeRegion;
 
-    beforeEach(function () {
-      fakeRegion = {
-        remove: sinon.stub(),
-        setOptions: sinon.stub(),
-        element: {}
-      };
+		beforeEach(function () {
+			fakeRegion = {
+				remove: sinon.stub(),
+				setOptions: sinon.stub(),
+				// Real HTML element avoids "appendChild is not a function" errors
+				element: document.createElement("div")
+			};
 
-      mockRegionsPlugin = {
-        addRegion: sinon.stub().returns(fakeRegion)
-      };
-    });
+			mockRegionsPlugin = {
+				addRegion: sinon.stub().returns(fakeRegion)
+			};
+		});
 
-    it("creates new regions for provided annotations", function () {
-      const annotations = [
-        { _id: "ann-1", start: 1, end: 5, colour: "#ff0000" }
-      ];
+		afterEach(function () {
+			sinon.restore();
+		});
 
-      const { result } = renderHook(() =>
-        useAnnotationRender(mockRegionsPlugin, annotations)
-      );
+		it("creates new regions for provided annotations", function () {
+			const annotations = [
+				{ _id: "ann-1", start: 1, end: 5, colour: "#ff0000" }
+			];
 
-      assert.isTrue(mockRegionsPlugin.addRegion.calledOnce);
-      assert.equal(result.current.length, 1);
-      assert.equal(result.current[0].id, "ann-1");
-    });
+			const { result } = renderHook(() =>
+				useAnnotationRender(mockRegionsPlugin, annotations)
+			);
 
-    it("removes region if annotation is deleted from props", function () {
-      const annotations = [
-        { _id: "ann-1", start: 1, end: 5, colour: "#ff0000" }
-      ];
+			assert.isTrue(mockRegionsPlugin.addRegion.calledOnce);
+			assert.equal(result.current.length, 1);
+			assert.equal(result.current[0].id, "ann-1");
+		});
 
-      const { rerender } = renderHook(
-        ({ plugin, list }) => useAnnotationRender(plugin, list),
-        { initialProps: { plugin: mockRegionsPlugin, list: annotations } }
-      );
+		it("removes region if annotation is deleted from props", function () {
+			const annotations = [
+				{ _id: "ann-1", start: 1, end: 5, colour: "#ff0000" }
+			];
 
-      // Pass empty list to simulate Mongo deletion
-      rerender({ plugin: mockRegionsPlugin, list: [] });
+			const { rerender } = renderHook(
+				({ plugin, list }) => useAnnotationRender(plugin, list),
+				{
+					initialProps: {
+						plugin: mockRegionsPlugin,
+						list: annotations
+					}
+				}
+			);
 
-      assert.isTrue(fakeRegion.remove.calledOnce);
-    });
+			// Pass empty list to simulate Mongo deletion
+			rerender({ plugin: mockRegionsPlugin, list: [] });
 
-    it("clears all drawn regions on component unmount", function () {
-      const annotations = [
-        { _id: "ann-1", start: 1, end: 5, colour: "#ff0000" }
-      ];
+			assert.isTrue(fakeRegion.remove.calledOnce);
+		});
 
-      const { unmount } = renderHook(() =>
-        useAnnotationRender(mockRegionsPlugin, annotations)
-      );
+		it("clears all drawn regions on component unmount", function () {
+			const annotations = [
+				{ _id: "ann-1", start: 1, end: 5, colour: "#ff0000" }
+			];
 
-      unmount();
+			const { unmount } = renderHook(() =>
+				useAnnotationRender(mockRegionsPlugin, annotations)
+			);
 
-      assert.isTrue(fakeRegion.remove.calledOnce);
-    });
-  });
+			unmount();
+
+			assert.isTrue(fakeRegion.remove.calledOnce);
+		});
+	});
 }

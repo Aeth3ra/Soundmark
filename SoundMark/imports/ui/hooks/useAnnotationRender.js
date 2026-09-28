@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import {
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+	useCallback
+} from "react";
+
+const DEFAULT_TIMESTAMP_COLOUR = "#ff6b4a";
 
 /**
  * Renders the annotations provided using the regions plugin
@@ -6,114 +14,130 @@ import { useEffect, useRef, useState, useCallback } from "react";
  * @param {Array<{_id, start, end, tags, comment}>} annotations list of annotations
  */
 export const useAnnotationRender = (regionsPlugin, annotations) => {
-  // A map to track which annotation data is link to which annotation region
-  const drawnRef = useRef(new Map());
-  const [markerSlots, setMarkerSlots] = useState([]);
+	// A map to track which annotation data is link to which annotation region
+	const drawnRef = useRef(new Map());
+	const [markerSlots, setMarkerSlots] = useState([]);
 
-  const refreshMarkerSlots = useCallback(() => {
-    const slots = [];
-    drawnRef.current.forEach((waveRegion, id) => {
-      slots.push({
-        id,
-        slotElement: waveRegion.element, // the empty box wavesurfer created
-        annotation: waveRegion.__annotation,
-        isTimestamp: waveRegion.__isTimestamp,
-        region: waveRegion
-      });
-    });
-    setMarkerSlots(slots);
-  }, []);
+	const refreshMarkerSlots = useCallback(() => {
+		const slots = [];
+		drawnRef.current.forEach((waveRegion, id) => {
+			slots.push({
+				id,
+				slotElement: waveRegion.__mount,
+				annotation: waveRegion.__annotation,
+				isTimestamp: waveRegion.__isTimestamp,
+				region: waveRegion
+			});
+		});
+		setMarkerSlots(slots);
+	}, []);
 
-  useEffect(() => {
-    if (!regionsPlugin) return;
+	useLayoutEffect(() => {
+		if (!regionsPlugin) return;
 
-    const drawn = drawnRef.current;
-    const annotationIds = new Set(annotations.map((an) => an._id));
+		const drawn = drawnRef.current;
+		const annotationIds = new Set(annotations.map((an) => an._id));
 
-    // Delete the regions that no longer in mongo
-    for (const [id, waveRegion] of drawn.entries()) {
-      if (!annotationIds.has(id)) {
-        waveRegion.remove();
-        drawn.delete(id);
-      }
-    }
+		// Delete the regions that no longer in mongo
+		for (const [id, waveRegion] of drawn) {
+			if (!annotationIds.has(id)) {
+				waveRegion.remove();
+				drawn.delete(id);
+			}
+		}
 
-    // Render annotations that hasn't been rendered yet
-    annotations.forEach((annotation) => {
-      const isTimestamp = annotation.end == null;
-      const existing = drawn.get(annotation._id);
+		annotations.forEach((annotation) => {
+			const isTimestamp = annotation.end == null;
+			const existing = drawn.get(annotation._id);
 
-      if (existing) {
-        const currentEnd = isTimestamp ? annotation.start : annotation.end;
-        const newColour = isTimestamp
-          ? annotation.colour || "#ff6b4a"
-          : applyOpacity(annotation.colour, 0.2);
+			// New annotation, OR it just switched between region and timestamp.
+			if (!existing || existing.__isTimestamp !== isTimestamp) {
+				existing?.remove();
+				drawn.set(
+					annotation._id,
+					createRegion(regionsPlugin, annotation)
+				);
+				return;
+			}
 
-        // Update time range if it changed
-        if (
-          existing.start !== annotation.start ||
-          existing.end !== currentEnd
-        ) {
-          existing.setOptions({ start: annotation.start, end: currentEnd });
-        }
+			// Same kind as before: update in place
+			const currentEnd = isTimestamp ? annotation.start : annotation.end;
+			const newColour = regionColour(annotation, isTimestamp);
 
-        // Update colour if it changed
-        if (existing.color !== newColour) {
-          existing.setOptions({ color: newColour });
-        }
-        // Keep tags/comment fresh even if geometry didn't change
-        existing.__annotation = annotation;
-        return;
-      }
+			if (
+				existing.start !== annotation.start ||
+				existing.end !== currentEnd
+			) {
+				existing.setOptions({
+					start: annotation.start,
+					end: currentEnd
+				});
+			}
+			if (existing.color !== newColour) {
+				existing.setOptions({ color: newColour });
+			}
+			// Keep tags/comment fresh even if geometry didn't change
+			existing.__annotation = annotation;
+		});
 
-      // Create an empty box on the waveform - no content yet.
-      // React fills it in via AnnotationMarkersLayer below.
-      const waveRegion = regionsPlugin.addRegion(
-        isTimestamp
-          ? {
-              id: `annotation-${annotation._id}`,
-              start: annotation.start,
-              color: annotation.colour || "#ff6b4a",
-              drag: false,
-              resize: false
-            }
-          : {
-              id: `annotation-${annotation._id}`,
-              start: annotation.start,
-              end: annotation.end,
-              color: applyOpacity(annotation.colour, 0.2),
-              drag: false,
-              resize: false
-            }
-      );
-      // Save it into the map
-      waveRegion.__annotation = annotation;
-      waveRegion.__isTimestamp = isTimestamp;
-      drawn.set(annotation._id, waveRegion);
-    });
-    refreshMarkerSlots();
-  }, [regionsPlugin, annotations, refreshMarkerSlots]);
+		refreshMarkerSlots();
+	}, [regionsPlugin, annotations, refreshMarkerSlots]);
 
-  useEffect(() => {
-    return () => {
-      drawnRef.current.forEach((waveRegion) => waveRegion.remove());
-      drawnRef.current.clear();
-    };
-  }, []);
+	useEffect(() => {
+		return () => {
+			drawnRef.current.forEach((waveRegion) => waveRegion.remove());
+			drawnRef.current.clear();
+		};
+	}, []);
 
-  return markerSlots;
+	return markerSlots;
+};
+
+// Timestamps are a solid colour, regions a 20% wash of it
+const regionColour = (annotation, isTimestamp) =>
+	isTimestamp
+		? annotation.colour || DEFAULT_TIMESTAMP_COLOUR
+		: applyOpacity(annotation.colour, 0.2);
+
+// Creates an empty box on the waveform - no content yet.
+// React fills it in via AnnotationMarkersLayer.
+const createRegion = (regionsPlugin, annotation) => {
+	const isTimestamp = annotation.end == null;
+
+	const waveRegion = regionsPlugin.addRegion({
+		id: `annotation-${annotation._id}`,
+		start: annotation.start,
+		...(isTimestamp ? {} : { end: annotation.end }), // a timestamp has no end
+		color: regionColour(annotation, isTimestamp),
+		drag: false,
+		resize: false
+	});
+
+	waveRegion.__annotation = annotation;
+	waveRegion.__isTimestamp = isTimestamp;
+
+	// React renders into a node it owns, not into wavesurfer's own element.
+	// Wavesurfer can remove, clear or rebuild its elements at any time, and
+	// React then can't find its children to remove them (removeChild error).
+	// display: contents means the mount adds no box, so layout is unchanged.
+	const mount = document.createElement("div");
+	mount.style.display = "contents";
+	waveRegion.element.appendChild(mount);
+	waveRegion.__mount = mount;
+
+	return waveRegion;
 };
 
 // Helper function to force 20% opacity (alpha = 0.2) on any hex color
 const applyOpacity = (hexColor, alpha = 0.2) => {
-  if (!hexColor) return `rgba(74, 58, 255, ${alpha})`;
-  // Convert 6-digit hex to RGBA
-  const hex = hexColor.replace("#", "");
-  if (hex.length === 6) {
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  return hexColor;
+	if (!hexColor) return `rgba(74, 58, 255, ${alpha})`;
+	// Convert 6-digit hex to RGBA
+	const hex = hexColor.replace("#", "");
+	if (hex.length === 6) {
+		const r = parseInt(hex.substring(0, 2), 16);
+		const g = parseInt(hex.substring(2, 4), 16);
+		const b = parseInt(hex.substring(4, 6), 16);
+		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+	}
+	return hexColor;
 };

@@ -6,7 +6,10 @@ import { ProjectPackageExportButton } from "../components/ProjectPackageExportBu
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
 import { EffectForm } from "../components/effects/EffectForm";
 import { EffectList } from "../components/effects/EffectList";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useKeyboardShortcut } from "../hooks/useKeyboardShortcut";
+import { useRegionContextMenu } from "../hooks/useRegionContextMenu";
+import { RegionContextMenu } from "../components/RegionContextMenu";
 import { useTracker, useSubscribe } from "meteor/react-meteor-data";
 import { AnnotationsCollection } from "../../api/annotations/annotationsCollection";
 import { EffectsCollection } from "../../api/effects/effectsCollection";
@@ -19,7 +22,15 @@ import { useAnnotationAnalysis } from "../hooks/useAnnotationAnalysis";
 import { useZoomPlugin } from "../hooks/useZoom";
 import { useWavesurfer } from "../hooks/useWaveSurfer";
 import { getPlayableUrl } from "../services/audioService";
-import { ChevronLeft, Link2, Check, ListMusic, Crown } from "lucide-react";
+import { deleteAnnotation } from "../services/annotationService";
+import {
+	ChevronLeft,
+	Link2,
+	Check,
+	ListMusic,
+	Crown,
+	Wand2
+} from "lucide-react";
 import { AnnotationList } from "../components/annotations/AnnotationList";
 import { AnnotationTooltip } from "../components/annotations/AnnotationToolTip";
 import { AnnotationMarkersLayer } from "../components/annotations/AnnotationMarkersLayer";
@@ -34,6 +45,11 @@ import { WaveformDisplay } from "../components/waveform/WaveformDisplay";
 import { useWaveformSync } from "../hooks/useWaveformSync";
 import { SyncStatusToggle } from "../components/SyncStatusToggle";
 import { ToastError } from "../components/ToastError";
+import { ScrubBar } from "../components/waveform/ScrubBar";
+import { buildRegionMenuItems } from "../lib/regionMenuItem";
+import { getPlaybackEffects } from "../utils/playbackEffects";
+
+const EMPTY_MUTED_EFFECT_IDS = new Set();
 
 export const PlayerPage = () => {
 	const { fileId } = useParams();
@@ -53,6 +69,11 @@ export const PlayerPage = () => {
 	const [selectedTags, setSelectedTags] = useState([]);
 	const [editingAnnotation, setEditingAnnotation] = useState(null);
 	const [followingUserId, setFollowingUserId] = useState(null);
+	const [localEffectMutes, setLocalEffectMutes] = useState({
+		fileId,
+		userId: null,
+		ids: new Set()
+	});
 
 	// A form opened for one file must not carry over to another file.
 	useEffect(() => {
@@ -64,7 +85,7 @@ export const PlayerPage = () => {
 	// Tags currently used to filter the annotation list
 	const toggleTagFilter = (tag) => {
 		setSelectedTags((prev) =>
-			prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+			prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
 		);
 	};
 	const clearTagFilters = () => setSelectedTags([]);
@@ -80,13 +101,30 @@ export const PlayerPage = () => {
 
 	// Get user
 	const { userId, name, isReady } = useGuestAccount();
+	const mutedEffectIds =
+		localEffectMutes.fileId === fileId &&
+		localEffectMutes.userId === userId
+			? localEffectMutes.ids
+			: EMPTY_MUTED_EFFECT_IDS;
+	const toggleLocalEffect = (effectId) => {
+		setLocalEffectMutes((current) => {
+			const ids = new Set(
+				current.fileId === fileId && current.userId === userId
+					? current.ids
+					: []
+			);
+			if (ids.has(effectId)) ids.delete(effectId);
+			else ids.add(effectId);
+			return { fileId, userId, ids };
+		});
+	};
 
 	const identity = useMemo(
 		() => ({
 			userId,
-			name,
+			name
 		}),
-		[userId, name],
+		[userId, name]
 	);
 
 	// Tracks who's hosting this file's session, and whether that host has
@@ -128,10 +166,17 @@ export const PlayerPage = () => {
 	const effects = useTracker(() => {
 		return EffectsCollection.find(
 			{ fileId },
-			{ sort: { order: 1, createdAt: 1, _id: 1 } },
+			{ sort: { order: 1, createdAt: 1, _id: 1 } }
 		).fetch();
 	}, [fileId]);
-	const nextEffectOrder = effects.reduce((next, effect) => Math.max(next, effect.order + 1), 0);
+	const playbackEffects = useMemo(
+		() => getPlaybackEffects(effects, mutedEffectIds, userId),
+		[effects, mutedEffectIds, userId]
+	);
+	const nextEffectOrder = effects.reduce(
+		(next, effect) => Math.max(next, effect.order + 1),
+		0
+	);
 
 	// Load wavesurfer
 	const {
@@ -155,26 +200,35 @@ export const PlayerPage = () => {
 		isAudioReady,
 		audioError,
 		audioVersion,
-		retryAudio,
-	} = useWavesurfer(audioUrl, effects, !isEffectsLoading());
+		retryAudio
+	} = useWavesurfer(audioUrl, playbackEffects, !isEffectsLoading());
 
 	// Load regions plugin for wavesurfer
 	const regionsPlugin = useRegionsPlugin(wavesurferInstance);
 	const { activeRegion, clearRegion } = useRegionSelection(regionsPlugin);
-	const regionAnalysis = useRegionAnalysis(wavesurferInstance, activeRegion, audioVersion);
+	const { menuState: regionMenuState, close: closeRegionMenu } =
+		useRegionContextMenu(regionsPlugin);
+	const regionAnalysis = useRegionAnalysis(
+		wavesurferInstance,
+		activeRegion,
+		audioVersion
+	);
 
 	useZoomPlugin(wavesurferInstance);
 
 	// Subscribes to annotation collection for the current file
 	const isAnnotationsLoading = useSubscribe("annotations.forFile", fileId);
 	const annotations = useTracker(() => {
-		return AnnotationsCollection.find({ fileId }, { sort: { start: 1 } }).fetch();
+		return AnnotationsCollection.find(
+			{ fileId },
+			{ sort: { start: 1 } }
+		).fetch();
 	}, [fileId]);
 	const annotationAnalyses = useAnnotationAnalysis(
 		wavesurferInstance,
 		annotations,
 		isAnnotateListOpen,
-		audioVersion,
+		audioVersion
 	);
 
 	// Subscribes to the display names of everyone who has authored an
@@ -189,11 +243,17 @@ export const PlayerPage = () => {
 		position: currentTime,
 		playbackRate,
 		isPlaying,
-		followingUserId,
+		followingUserId
 	});
 
 	//For playhead sync
-	const { targetUser, syncError, clearSyncError, stopFollowing, toggleFollow } = useWaveformSync({
+	const {
+		targetUser,
+		syncError,
+		clearSyncError,
+		stopFollowing,
+		toggleFollow
+	} = useWaveformSync({
 		duration,
 		otherUsers,
 		currentUserId: identity?.userId,
@@ -205,7 +265,7 @@ export const PlayerPage = () => {
 		pause,
 		isPlaying,
 		playbackRate,
-		setPlaybackRate,
+		setPlaybackRate
 	});
 
 	// userId -> display name, for showing "who made this" on annotation cards
@@ -231,17 +291,111 @@ export const PlayerPage = () => {
 		if (duration > 0) seekTo(seconds / duration);
 	};
 
+	// Toggles the Annotations panel open/closed, always closing the Effects
+	// panel first — the two rail buttons act as one mutually-exclusive pair.
+	const toggleAnnotationsPanel = () => {
+		setIsAnnotateListOpen((open) => !open);
+		setIsEffectsListOpen(false);
+	};
+
+	const toggleEffectsPanel = () => {
+		setIsEffectsListOpen((open) => !open);
+		setIsAnnotateListOpen(false);
+	};
+
+	// Opens the annotation form for the current selection, or the current
+	// playhead position if nothing is selected.
+	const handleCreateAnnotation = useCallback(() => {
+		setEffectRegion(null);
+		setEditingAnnotation(null);
+		openAnnotation(
+			activeRegion
+				? {
+						startMs: activeRegion.start * 1000,
+						endMs: activeRegion.end * 1000
+					}
+				: {
+						startMs: currentTime * 1000,
+						endMs: null
+					}
+		);
+	}, [activeRegion, currentTime, openAnnotation]);
+
+	// Opens the effect form for the current selection.
+	const handleApplyEffect = useCallback(() => {
+		setEffectActionError(null);
+
+		if (!activeRegion) {
+			setEffectActionError(
+				"Select a region on the waveform before applying an effect."
+			);
+			return;
+		}
+
+		closeAnnotation();
+		setEditingAnnotation(null);
+		// Copy the times so changes to the selection do not move this form's target.
+		setEffectRegion({
+			fileId,
+			start: activeRegion.start,
+			end: activeRegion.end
+		});
+	}, [activeRegion, closeAnnotation, fileId]);
+
+	// Deletes/clears the current region selection.
+	const handleDeleteRegion = useCallback(() => {
+		clearRegion();
+	}, [clearRegion]);
+
+	// Opens the annotation form in edit mode.
+	const handleEditAnnotation = useCallback((annotation) => {
+		setEffectRegion(null);
+		setEditingAnnotation(annotation);
+	}, []);
+
+	// Deletes a persisted annotation.
+	const handleDeleteAnnotation = useCallback(async (annotation) => {
+		await deleteAnnotation(annotation);
+	}, []);
+
+	const regionMenuAnnotation = regionMenuState?.region?.__annotation ?? null;
+
+	const canApplyEffect =
+		Boolean(userId) &&
+		duration > 0 &&
+		!isEffectsLoading() &&
+		isAudioReady &&
+		!effectRegion;
+
+	// Keyboard shortcuts for the region selection actions above.
+	useKeyboardShortcut("mod+a", handleCreateAnnotation, {
+		enabled: isAudioReady
+	});
+	useKeyboardShortcut("mod+d", handleDeleteRegion, {
+		enabled: isAudioReady && Boolean(activeRegion)
+	});
+	useKeyboardShortcut("mod+e", handleApplyEffect, {
+		enabled: canApplyEffect
+	});
+
 	// Session is over screen
 	if (audioMissing) {
 		return (
 			<div className="h-screen flex flex-col items-center justify-center gap-4 bg-base-300 px-6 text-center">
-				<img src="/icon-512.png" alt="SoundMark logo" className="h-10 w-10 opacity-70" />
+				<img
+					src="/icon-512.png"
+					alt="SoundMark logo"
+					className="h-10 w-10 opacity-70"
+				/>
 				<h1 className="text-xl font-bold">This session has ended</h1>
 				<p className="text-base-content/60 text-sm max-w-sm">
-					The audio for this session is no longer available. It may have been removed
-					after the host ended things.
+					The audio for this session is no longer available. It may
+					have been removed after the host ended things.
 				</p>
-				<button onClick={() => navigate("/")} className="btn btn-primary btn-sm">
+				<button
+					onClick={() => navigate("/")}
+					className="btn btn-primary btn-sm"
+				>
 					Back to home
 				</button>
 			</div>
@@ -254,12 +408,19 @@ export const PlayerPage = () => {
 			{/* Top header: logo + back/share */}
 			<header className="flex items-center justify-between px-6 py-4 border-b border-base-300 bg-base-100">
 				<div className="flex items-center gap-3">
-					<button onClick={() => navigate("/")} className="btn btn-ghost btn-sm gap-2">
+					<button
+						onClick={() => navigate("/")}
+						className="btn btn-ghost btn-sm gap-2"
+					>
 						<ChevronLeft className="h-4 w-4" />
 						Back
 					</button>
 					<div className="w-px h-5 bg-base-300 mx-1" />
-					<img src="/icon-512.png" alt="SoundMark logo" className="h-6 w-6" />
+					<img
+						src="/icon-512.png"
+						alt="SoundMark logo"
+						className="h-6 w-6"
+					/>
 					<span className="text-lg font-bold">Soundmark</span>
 				</div>
 				<div className="flex items-center gap-3">
@@ -274,10 +435,16 @@ export const PlayerPage = () => {
 						</span>
 					)}
 					{/* Workspace users */}
-					<WorkspaceUsers currentUser={identity} otherUsers={otherUsers} />
+					<WorkspaceUsers
+						currentUser={identity}
+						otherUsers={otherUsers}
+					/>
 
 					{/* Share button */}
-					<button onClick={handleShare} className="btn btn-outline btn-sm gap-2">
+					<button
+						onClick={handleShare}
+						className="btn btn-outline btn-sm gap-2"
+					>
 						{copied ? (
 							<>
 								<Check className="h-4 w-4" />
@@ -293,24 +460,32 @@ export const PlayerPage = () => {
 				</div>
 			</header>
 
-			{/* Main area: player (left) + annotations sidebar  */}
+			{/* Main area: player (left) + panel rail + annotations/effects sidebar */}
 			<div className="flex-1 flex overflow-hidden">
 				{/* Player column */}
-				<div className="flex-1 flex flex-col overflow-y-auto">
+				<div className="flex-1 flex flex-col overflow-y-auto min-w-0">
 					{!audioUrl ? (
 						<div className="flex-1 flex flex-col items-center justify-center gap-4">
 							<span className="loading loading-spinner loading-lg text-primary"></span>
-							<p className="text-base-content/60 text-sm">Loading audio...</p>
+							<p className="text-base-content/60 text-sm">
+								Loading audio...
+							</p>
 						</div>
 					) : (
 						<>
 							{isProcessing && (
-								<p role="status" className="px-6 py-2 text-sm text-base-content/60">
+								<p
+									role="status"
+									className="px-6 py-2 text-sm text-base-content/60"
+								>
 									Updating audio preview…
 								</p>
 							)}
 							{audioError && (
-								<div role="alert" className="alert alert-error mx-6 my-2">
+								<div
+									role="alert"
+									className="alert alert-error mx-6 my-2"
+								>
 									<span>{audioError}</span>
 									<button
 										type="button"
@@ -322,7 +497,7 @@ export const PlayerPage = () => {
 								</div>
 							)}
 							{/* Toolbar  */}
-							<div className="flex items-center gap-6 px-6 py-3 border-b border-base-300 bg-base-100">
+							<div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 border-b border-base-300 bg-base-100">
 								<PlayerControls
 									key={fileId}
 									disabled={!isAudioReady}
@@ -338,45 +513,27 @@ export const PlayerPage = () => {
 									onVolumeChange={setVolume}
 									onZoomChange={setZoom}
 								/>
-
+								{/* Region time display */}
+								<RegionSelectionDisplay
+									activeRegion={activeRegion}
+									analysis={regionAnalysis}
+								/>
 								<div className="flex-1" />
-								<SyncStatusToggle
-									targetUser={targetUser}
-									onUnlock={stopFollowing}
-								/>
-								<AudioExportButton fileId={fileId} />
-								<ProjectPackageExportButton
-									fileId={fileId}
-									annotations={annotations}
-								/>
-
-								<button
-									onClick={() => {
-										setIsAnnotateListOpen((open) => !open);
-										setIsEffectsListOpen(false);
-									}}
-									className={`btn btn-sm gap-2 ${isAnnotateListOpen ? "btn-primary" : "btn-outline"}`}
-								>
-									<ListMusic className="h-4 w-4" />
-									Annotations
-									{annotations.length > 0 && (
-										<span className="badge badge-sm">{annotations.length}</span>
-									)}
-								</button>
-
-								<button
-									type="button"
-									onClick={() => {
-										setIsEffectsListOpen((open) => !open);
-										setIsAnnotateListOpen(false);
-									}}
-									className={`btn btn-sm gap-2 ${isEffectsListOpen ? "btn-primary" : "btn-outline"}`}
-								>
-									Effects
-									{effects.length > 0 && (
-										<span className="badge badge-sm">{effects.length}</span>
-									)}
-								</button>
+								<div className="flex shrink-0 items-center gap-6">
+									<SyncStatusToggle
+										targetUser={targetUser}
+										onUnlock={stopFollowing}
+									/>
+									<AudioExportButton
+										fileId={fileId}
+										effects={effects}
+									/>
+									<ProjectPackageExportButton
+										fileId={fileId}
+										annotations={annotations}
+										effects={effects}
+									/>
+								</div>
 							</div>
 
 							{/* Waveform  */}
@@ -386,9 +543,22 @@ export const PlayerPage = () => {
 							>
 								<div className="bg-base-100 rounded-box shadow-xl p-6 flex flex-col">
 									<div className="bg-base-200/40 rounded-box flex-1 p-4">
+										<ScrubBar
+											duration={duration}
+											currentTime={currentTime}
+											seekTo={seekTo}
+											wavesurferInstance={
+												wavesurferInstance
+											}
+											disabled={!isAudioReady}
+										/>
 										<WaveformDisplay
 											containerRef={containerRef}
-											wavesurferInstance={wavesurferInstance}
+											wavesurferInstance={
+												wavesurferInstance
+											}
+											effects={playbackEffects}
+											currentTime={currentTime}
 											duration={duration}
 											otherUsers={otherUsers}
 											followingUserId={followingUserId}
@@ -398,75 +568,31 @@ export const PlayerPage = () => {
 								</div>
 							</div>
 
-							{/* Region time display */}
-							<RegionSelectionDisplay
-								activeRegion={activeRegion}
-								analysis={regionAnalysis}
-							/>
-
 							{/* Region selection actions */}
 							<div className="flex items-center gap-2 self-start ml-6 mb-4">
 								<button
-									onClick={() => {
-										setEffectRegion(null);
-										setEditingAnnotation(null);
-										openAnnotation(
-											activeRegion
-												? {
-														startMs: activeRegion.start * 1000,
-														endMs: activeRegion.end * 1000,
-													}
-												: {
-														startMs: currentTime * 1000,
-														endMs: null,
-													},
-										);
-									}}
+									onClick={handleCreateAnnotation}
 									className="btn btn-sm btn-outline gap-2"
+									title="Create annotation (Ctrl/Cmd+A)"
 								>
 									Create annotation
 								</button>
 
 								<button
 									type="button"
-									disabled={
-										!userId ||
-										duration <= 0 ||
-										isEffectsLoading() ||
-										!isAudioReady ||
-										Boolean(effectRegion)
-									}
-									onClick={() => {
-										setEffectActionError(null);
-
-										if (!activeRegion) {
-											setEffectActionError(
-												"Select a region on the waveform before applying an effect.",
-											);
-											return;
-										}
-
-										closeAnnotation();
-										setEditingAnnotation(null);
-										// Copy the times so changes to the selection do not move this form's target.
-										setEffectRegion({
-											fileId,
-											start: activeRegion.start,
-											end: activeRegion.end,
-										});
-
-										setIsEffectsListOpen(true);
-										setIsAnnotateListOpen(false);
-									}}
+									disabled={!canApplyEffect}
+									onClick={handleApplyEffect}
 									className="btn btn-sm btn-outline"
+									title="Apply effect (Ctrl/Cmd+E)"
 								>
 									Apply effect
 								</button>
 
 								<button
-									onClick={clearRegion}
+									onClick={handleDeleteRegion}
 									disabled={!activeRegion}
 									className="btn btn-sm btn-outline gap-2"
+									title="Clear region (Ctrl/Cmd+D)"
 								>
 									Clear region
 								</button>
@@ -479,13 +605,51 @@ export const PlayerPage = () => {
 								/>
 
 								{effectActionError && (
-									<p role="alert" className="text-error text-sm">
+									<p
+										role="alert"
+										className="text-error text-sm"
+									>
 										{effectActionError}
 									</p>
 								)}
 							</div>
 						</>
 					)}
+				</div>
+
+				{/* Panel rail: toggles for the Annotations / Effects sidebar*/}
+				<div className="flex shrink-0 flex-col items-center gap-2 w-14 border-l border-base-300 bg-base-100 py-3">
+					<button
+						type="button"
+						onClick={toggleAnnotationsPanel}
+						className={`btn btn-sm btn-square relative ${isAnnotateListOpen ? "btn-primary" : "btn-ghost"}`}
+						title="Annotations"
+						aria-pressed={isAnnotateListOpen}
+						aria-label="Toggle annotations panel"
+					>
+						<ListMusic className="h-4 w-4" />
+						{annotations.length > 0 && (
+							<span className="badge badge-sm absolute -top-1.5 -right-1.5 px-1">
+								{annotations.length}
+							</span>
+						)}
+					</button>
+
+					<button
+						type="button"
+						onClick={toggleEffectsPanel}
+						className={`btn btn-sm btn-square relative ${isEffectsListOpen ? "btn-primary" : "btn-ghost"}`}
+						title="Effects"
+						aria-pressed={isEffectsListOpen}
+						aria-label="Toggle effects panel"
+					>
+						<Wand2 className="h-4 w-4" />
+						{effects.length > 0 && (
+							<span className="badge badge-sm absolute -top-1.5 -right-1.5 px-1">
+								{effects.length}
+							</span>
+						)}
+					</button>
 				</div>
 
 				{/* Annotations sidebar */}
@@ -500,15 +664,15 @@ export const PlayerPage = () => {
 					hiddenIds={hiddenAnnotationIds}
 					onToggleHidden={toggleAnnotationHidden}
 					userNames={userNames}
-					onEdit={(annotation) => {
-						setEffectRegion(null);
-						setEditingAnnotation(annotation);
-					}}
+					onEdit={handleEditAnnotation}
 					analyses={annotationAnalyses}
 				/>
 
 				<EffectList
 					effects={effects}
+					mutedEffectIds={mutedEffectIds}
+					onToggleLocalEffect={toggleLocalEffect}
+					userNames={userNames}
 					isOpen={isEffectsListOpen}
 					isLoading={isEffectsLoading()}
 					onClose={() => setIsEffectsListOpen(false)}
@@ -541,13 +705,40 @@ export const PlayerPage = () => {
 			/>
 
 			{/* Annotation Marker on top of the annotation regions/timestamps */}
-			<AnnotationMarkersLayer markerSlots={markerSlots} tooltipRef={tooltipRef} />
+			<AnnotationMarkersLayer
+				markerSlots={markerSlots}
+				tooltipRef={tooltipRef}
+			/>
 
 			{/* Annotation tool tip upon hover */}
 			<AnnotationTooltip ref={tooltipRef} userNames={userNames} />
 
+			{/* Right-click menu */}
+			<RegionContextMenu
+				position={regionMenuState}
+				onClose={closeRegionMenu}
+				items={buildRegionMenuItems({
+					annotation: regionMenuAnnotation,
+					isHidden: Boolean(
+						regionMenuAnnotation &&
+						hiddenAnnotationIds.has(regionMenuAnnotation._id)
+					),
+					onToggleHidden: toggleAnnotationHidden,
+					onEdit: handleEditAnnotation,
+					onDelete: handleDeleteAnnotation,
+					onCreateAnnotation: handleCreateAnnotation,
+					onApplyEffect: handleApplyEffect,
+					canApplyEffect,
+					onDeleteRegion: handleDeleteRegion
+				})}
+			/>
+
 			{/* Render the generic toast at the bottom of the page */}
-			<ToastError message={syncError} onClose={clearSyncError} autoDismissMs={5000} />
+			<ToastError
+				message={syncError}
+				onClose={clearSyncError}
+				autoDismissMs={5000}
+			/>
 		</div>
 	);
 };

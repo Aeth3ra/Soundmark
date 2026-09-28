@@ -1,8 +1,8 @@
 import { Meteor } from "meteor/meteor";
 import {
-    sliceAudioBuffer,
-    encodeWavBlob,
-    secondsToFileLabel
+	sliceAudioBuffer,
+	encodeWavBlob,
+	secondsToFileLabel
 } from "../utils/audioExport";
 import { applyEffectsChain } from "../utils/audioEffects";
 
@@ -12,25 +12,25 @@ import { applyEffectsChain } from "../utils/audioEffects";
  * @returns fileId which is linked to mongo entry
  */
 export async function upload(file) {
-    const { uploadUrl, fileId } = await Meteor.callAsync(
-        "audio.getUploadUrl",
-        file.name,
-        file.type
-    );
+	const { uploadUrl, fileId } = await Meteor.callAsync(
+		"audio.getUploadUrl",
+		file.name,
+		file.type
+	);
 
-    const response = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-            "Content-Type": file.type
-        },
-        body: file
-    });
+	const response = await fetch(uploadUrl, {
+		method: "PUT",
+		headers: {
+			"Content-Type": file.type
+		},
+		body: file
+	});
 
-    if (!response.ok) {
-        throw new Error("Upload to storage failed");
-    }
+	if (!response.ok) {
+		throw new Error("Upload to storage failed");
+	}
 
-    return fileId;
+	return fileId;
 }
 
 /**
@@ -39,8 +39,8 @@ export async function upload(file) {
  * @returns url for the audio from mongo entry
  */
 export async function getPlayableUrl(fileId) {
-    const downloadUrl = await Meteor.callAsync("audio.getDownloadUrl", fileId);
-    return downloadUrl;
+	const downloadUrl = await Meteor.callAsync("audio.getDownloadUrl", fileId);
+	return downloadUrl;
 }
 
 /**
@@ -49,64 +49,98 @@ export async function getPlayableUrl(fileId) {
  * @returns nothing
  */
 export async function deleteFile(fileId) {
-    await Meteor.callAsync("audio.deleteFile", fileId);
+	await Meteor.callAsync("audio.deleteFile", fileId);
 }
 
 /**
- * Downloads the original uploaded audio file without re-encoding it.
- * @param {string} fileId Mongo ID for the current audio file
+ * Exports the original audio file without applying effects.
+ *
+ * @param {string} fileId
  */
 export async function exportAudio(fileId) {
-    const download = await Meteor.callAsync("audio.getExportInfo", fileId);
-    const response = await fetch(download.url);
+	const info = await Meteor.callAsync("audio.getExportInfo", fileId);
+	const response = await fetch(info.url);
 
-    if (!response.ok) {
-        throw new Error("Could not export the audio");
-    }
+	if (!response.ok) {
+		throw new Error("Could not export the audio");
+	}
 
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+	const blob = await response.blob();
 
-    try {
-        link.href = objectUrl;
-        link.download = download.fileName;
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-    } finally {
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-    }
+	downloadBlob(blob, info.fileName);
 }
 
 const decodeAudioFile = async (arrayBuffer) => {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    const context = new AudioContextClass();
+	const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+	const context = new AudioContextClass();
 
-    try {
-        // Decode the source file independently of the waveform preview
-        // decodeAudioData produces floating-point samples at this context's rate
-        return await context.decodeAudioData(arrayBuffer);
-    } finally {
-        await context.close();
-    }
+	try {
+		// Decode the source file independently of the waveform preview
+		// decodeAudioData produces floating-point samples at this context's rate
+		return await context.decodeAudioData(arrayBuffer);
+	} finally {
+		await context.close();
+	}
 };
 
 /** Decode the source once for a player's preview session. */
 export async function loadAudioBuffer(url, signal) {
-    const response = await fetch(url, { signal });
-    if (!response.ok) throw new Error("Could not load the audio for playback.");
-    const buffer = await decodeAudioFile(await response.arrayBuffer());
-    if (signal?.aborted)
-        throw new DOMException("Audio load cancelled.", "AbortError");
-    return buffer;
+	const response = await fetch(url, { signal });
+	if (!response.ok) throw new Error("Could not load the audio for playback.");
+	const buffer = await decodeAudioFile(await response.arrayBuffer());
+	if (signal?.aborted)
+		throw new DOMException("Audio load cancelled.", "AbortError");
+	return buffer;
 }
 
 /** Use the same renderer as selection export, always starting from the source */
 export async function createPreviewBlob(sourceBuffer, effects) {
-    const processed = await applyEffectsChain(sourceBuffer, effects);
-    return encodeWavBlob(processed);
+	const processed = await applyEffectsChain(sourceBuffer, effects);
+	return encodeWavBlob(processed);
+}
+
+/**
+ * Fetches and decodes the source audio, then applies the saved effects.
+ *
+ * @param {Object} params
+ * @param {string} params.fileId
+ * @param {Array} [params.effects]
+ * @returns {Promise<AudioBuffer>}
+ */
+async function getProcessedAudio({ fileId, effects = [] }) {
+	const info = await Meteor.callAsync("audio.getExportInfo", fileId);
+	const response = await fetch(info.url);
+
+	if (!response.ok) {
+		throw new Error("Could not fetch the audio file for export.");
+	}
+
+	const arrayBuffer = await response.arrayBuffer();
+	const decoded = await decodeAudioFile(arrayBuffer);
+
+	return applyEffectsChain(decoded, effects);
+}
+
+/**
+ * Downloads an audio Blob as a file.
+ *
+ * @param {Blob} blob
+ * @param {string} fileName
+ */
+function downloadBlob(blob, fileName) {
+	const objectUrl = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+
+	try {
+		link.href = objectUrl;
+		link.download = fileName;
+
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+	} finally {
+		window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+	}
 }
 
 /**
@@ -123,45 +157,58 @@ export async function createPreviewBlob(sourceBuffer, effects) {
  * @param {string} [params.baseFileName]
  */
 export async function exportRegion({
-    fileId,
-    start,
-    end,
-    effects = [],
-    baseFileName = "soundmark-selection"
+	fileId,
+	start,
+	end,
+	effects = [],
+	baseFileName = "soundmark-selection"
 }) {
-    if (
-        !Number.isFinite(start) ||
-        !Number.isFinite(end) ||
-        start < 0 ||
-        end <= start
-    ) {
-        throw new Error("Select a region before exporting.");
-    }
+	if (
+		!Number.isFinite(start) ||
+		!Number.isFinite(end) ||
+		start < 0 ||
+		end <= start
+	) {
+		throw new Error("Select a valid region before exporting.");
+	}
 
-    const info = await Meteor.callAsync("audio.getExportInfo", fileId);
-    const response = await fetch(info.url);
+	const processed = await getProcessedAudio({
+		fileId,
+		effects
+	});
 
-    if (!response.ok) {
-        throw new Error("Could not fetch the audio file for export.");
-    }
+	if (end > processed.duration) {
+		throw new Error("The selected region is outside the audio duration.");
+	}
 
-    const decoded = await decodeAudioFile(await response.arrayBuffer());
+	const sliced = sliceAudioBuffer(processed, start, end);
+	const blob = encodeWavBlob(sliced);
 
-    const processed = await applyEffectsChain(decoded, effects);
-    const sliced = sliceAudioBuffer(processed, start, end);
-    const blob = encodeWavBlob(sliced);
+	const startLabel = secondsToFileLabel(start);
+	const endLabel = secondsToFileLabel(end);
 
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+	downloadBlob(blob, `${baseFileName}-${startLabel}-${endLabel}.wav`);
+}
 
-    try {
-        link.href = objectUrl;
-        link.download = `${baseFileName}-${secondsToFileLabel(start)}-${secondsToFileLabel(end)}.wav`;
+/**
+ * Exports the entire audio file with the current effects applied.
+ *
+ * @param {Object} params
+ * @param {string} params.fileId
+ * @param {Array} [params.effects]
+ * @param {string} [params.baseFileName]
+ */
+export async function exportFullAudio({
+	fileId,
+	effects = [],
+	baseFileName = "soundmark-audio"
+}) {
+	const processed = await getProcessedAudio({
+		fileId,
+		effects
+	});
 
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-    } finally {
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-    }
+	const blob = encodeWavBlob(processed);
+
+	downloadBlob(blob, `${baseFileName}.wav`);
 }
