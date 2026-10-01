@@ -1,3 +1,4 @@
+import { useNotifications } from "../NotificationProvider";
 import { Trash2, Eye, EyeOff, User, Pencil } from "lucide-react";
 import { deleteAnnotation } from "../../services/annotationService";
 import { formatMs } from "../../utils/time";
@@ -12,10 +13,15 @@ export const AnnotationCard = ({
   onEdit,
   analysis
 }) => {
+  const { notify } = useNotifications();
   // Deletes this annotation via the backend
   const handleDelete = async (e) => {
     e.stopPropagation();
-    await deleteAnnotation(annotation);
+    try {
+      await deleteAnnotation(annotation);
+    } catch {
+      notify({ fileId: annotation.fileId, type: "error", message: "Could not delete the annotation. Please try again." });
+    }
   };
 
   //Toggle whether annotation is hidden or not

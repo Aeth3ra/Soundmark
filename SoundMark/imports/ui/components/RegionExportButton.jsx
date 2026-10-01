@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useNotifiedExport } from "../hooks/useNotifiedExport";
 import { exportRegion } from "../services/audioService";
 
 /**
@@ -7,26 +7,11 @@ import { exportRegion } from "../services/audioService";
  * actions row for now, until that row gets promoted to a proper menu.
  */
 export const RegionExportButton = ({ fileId, activeRegion, effects = [], isEffectsLoading = false }) => {
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleExport = async () => {
-    if (isExporting || !activeRegion || isEffectsLoading) return;
-
-    setIsExporting(true);
-
-    try {
-      await exportRegion({
-        fileId,
-        start: activeRegion.start,
-        end: activeRegion.end,
-        effects
-      });
-    } catch (error) {
-      console.error("Region export failed:", error);
-      window.alert(error.reason || error.message || "Could not export the selected region.");
-    } finally {
-      setIsExporting(false);
-    }
+  const { run, isExporting } = useNotifiedExport(fileId);
+  const handleExport = () => {
+    if (!activeRegion || isEffectsLoading) return;
+    const options = { fileId, start: activeRegion.start, end: activeRegion.end, effects };
+    return run({ action: () => exportRegion(options), pending: "Exporting selection…", errorMessage: "Could not export the selected region." });
   };
 
   return (

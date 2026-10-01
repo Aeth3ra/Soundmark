@@ -1,13 +1,28 @@
 import { Meteor } from "meteor/meteor";
-import { render, screen } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { assert } from "chai";
+import sinon from "sinon";
+import { NotificationProvider } from "../NotificationProvider";
 import { AnnotationCard } from "./AnnotationCard";
 
 if (Meteor.isClient) {
   describe("AnnotationCard", function () {
+    afterEach(() => { cleanup(); sinon.restore(); });
+    it("reports deletion failures without seeking or dropping the annotation", async function () {
+      sinon.stub(Meteor, "callAsync").rejects(new Error("Delete failed"));
+      sinon.stub(console, "error");
+      const onSeek = sinon.spy();
+      const { getByTitle, getByRole, getByText } = render(
+        <NotificationProvider fileId="f"><AnnotationCard annotation={{ _id: "a", fileId: "f", title: "Verse", start: 1 }} onSeek={onSeek} /></NotificationProvider>
+      );
+      await act(async () => { fireEvent.click(getByTitle("Delete annotation")); });
+      assert.include(getByRole("alert").textContent, "Could not delete");
+      assert.exists(getByText("Verse"));
+      assert.isFalse(onSeek.called);
+    });
     it("shows all analysed region properties", function () {
       render(
-        <AnnotationCard
+        <NotificationProvider><AnnotationCard
           annotation={{
             _id: "annotation-one",
             title: "Verse",
@@ -23,7 +38,7 @@ if (Meteor.isClient) {
             isAnalysing: false
           }}
           onSeek={() => {}}
-        />
+        /></NotificationProvider>
       );
 
       assert.exists(screen.getByText("Duration"));

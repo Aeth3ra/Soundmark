@@ -45,16 +45,18 @@ export function usePresence({
 		followingUserIdRef.current = followingUserId;
 	}, [followingUserId]);
 
-	const others = useTracker(() => {
-		if (!identity?.userId) return [];
+	const { others, participants } = useTracker(() => {
+		if (!identity?.userId) return { others: [], participants: [] };
 		const cutoff = new Date(Date.now() - STALE_MS);
-		return PresenceCollection.find({
+		const participants = PresenceCollection.find({
 			fileId,
-			userId: { $ne: identity.userId },
-			updatedAt: { $gt: cutoff }
+			userId: { $ne: identity.userId }
 		})
 			.fetch()
 			.map((doc) => ({ ...doc, color: colourForId(doc.userId) }));
+		// Notifications follow server membership; a backgrounded tab's stale
+		// playhead should not look like a collaborator leaving the workspace.
+		return { participants, others: participants.filter((doc) => doc.updatedAt > cutoff) };
 	}, [fileId, identity?.userId]);
 
 	// Network Engine: Handles both fast movement updates and slow pause heartbeats
@@ -118,5 +120,5 @@ export function usePresence({
 		};
 	}, [fileId, identity?.userId]);
 
-	return { others, isLoading };
+	return { others, participants, isLoading };
 }

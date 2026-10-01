@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useNotifiedExport } from "../hooks/useNotifiedExport";
 import { exportProjectPackage } from "../services/projectPackageService";
 
 /**
@@ -11,22 +11,11 @@ export const ProjectPackageExportButton = ({
 	annotations,
 	effects
 }) => {
-	const [isExporting, setIsExporting] = useState(false);
-
-	const handleExport = async () => {
-		if (isExporting) return;
-
-		setIsExporting(true);
-
-		try {
-			await exportProjectPackage({ fileId, annotations, effects });
-		} catch (error) {
-			console.error("Project package export failed:", error);
-			window.alert("Could not export the project package.");
-		} finally {
-			setIsExporting(false);
-		}
-	};
+	const { run, isExporting } = useNotifiedExport(fileId);
+	const handleExport = () => run({
+		action: () => exportProjectPackage({ fileId, annotations, effects }),
+		pending: "Packaging project…", errorMessage: "Could not export the project package."
+	});
 
 	return (
 		<button

@@ -1,27 +1,13 @@
-import { useState } from "react";
+import { useNotifiedExport } from "../hooks/useNotifiedExport";
 import { ChevronDown } from "lucide-react";
 import { exportAudio, exportFullAudio } from "../services/audioService";
 
 export const AudioExportButton = ({ fileId, effects = [] }) => {
-	const [exportingMode, setExportingMode] = useState(null); // null | "original" | "processed"
-	const isExporting = exportingMode !== null;
+	const { run, mode: exportingMode, isExporting } = useNotifiedExport(fileId);
 	const activeEffectCount = effects.filter((effect) => effect.enabled).length;
-
-	const runExport = async (mode, action, errorMessage) => {
-		if (isExporting) return;
-
-		// Close the focus-based dropdown once an option is chosen.
+	const runExport = (mode, action, errorMessage) => {
 		document.activeElement?.blur();
-		setExportingMode(mode);
-
-		try {
-			await action();
-		} catch (error) {
-			console.error(`Audio export (${mode}) failed:`, error);
-			window.alert(errorMessage);
-		} finally {
-			setExportingMode(null);
-		}
+		return run({ mode, action, errorMessage, pending: mode === "processed" ? "Rendering audio…" : "Exporting audio…" });
 	};
 
 	const handleExportOriginal = () =>

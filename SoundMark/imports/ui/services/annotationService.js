@@ -5,6 +5,7 @@ export async function deleteAnnotation(annotation) {
 		await Meteor.callAsync("annotations.delete", annotation._id);
 	} catch (err) {
 		console.error("Couldn't delete annotation", err);
+		throw err;
 	}
 }
 
