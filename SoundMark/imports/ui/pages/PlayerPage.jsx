@@ -109,8 +109,7 @@ export const PlayerPage = () => {
 	// Get user
 	const { userId, name, isReady } = useGuestAccount();
 	const mutedEffectIds =
-		localEffectMutes.fileId === fileId &&
-		localEffectMutes.userId === userId
+		localEffectMutes.fileId === fileId && localEffectMutes.userId === userId
 			? localEffectMutes.ids
 			: EMPTY_MUTED_EFFECT_IDS;
 	const toggleLocalEffect = (effectId) => {
@@ -244,7 +243,11 @@ export const PlayerPage = () => {
 	const isAuthorsLoading = useSubscribe("annotations.authorsForFile", fileId);
 
 	//Get presences of other users
-	const { others: otherUsers, participants, isLoading: isPresenceLoading } = usePresence({
+	const {
+		others: otherUsers,
+		participants,
+		isLoading: isPresenceLoading
+	} = usePresence({
 		fileId,
 		identity,
 		position: currentTime,
@@ -275,8 +278,22 @@ export const PlayerPage = () => {
 		setPlaybackRate
 	});
 
-	usePresenceNotifications({ fileId, others: participants, ready: isReady && !isPresenceLoading(), connected, sessionEnded, followingUserId, stopFollowing });
-	useProcessingNotification({ fileId, isProcessing, isAudioReady, audioError, audioVersion });
+	usePresenceNotifications({
+		fileId,
+		others: participants,
+		ready: isReady && !isPresenceLoading(),
+		connected,
+		sessionEnded,
+		followingUserId,
+		stopFollowing
+	});
+	useProcessingNotification({
+		fileId,
+		isProcessing,
+		isAudioReady,
+		audioError,
+		audioVersion
+	});
 	useEffect(() => {
 		if (!syncError) return;
 		notify({ fileId, type: "error", message: syncError });
@@ -287,7 +304,13 @@ export const PlayerPage = () => {
 	const userNames = useUserNames({ fileId, otherUsers, userId, name });
 
 	useActivityNotifications({
-		fileId, userId, annotations, effects, connected, sessionEnded, userNames,
+		fileId,
+		userId,
+		annotations,
+		effects,
+		connected,
+		sessionEnded,
+		userNames,
 		ready: isReady && !isAnnotationsLoading() && !isEffectsLoading(),
 		onView: (kind, item) => {
 			setIsAnnotateListOpen(kind === "annotation");
@@ -311,7 +334,12 @@ export const PlayerPage = () => {
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
 		} catch {
-			notify({ fileId, type: "error", message: "Could not copy the link. Copy the address from your browser instead." });
+			notify({
+				fileId,
+				type: "error",
+				message:
+					"Could not copy the link. Copy the address from your browser instead."
+			});
 		}
 	};
 
@@ -383,13 +411,21 @@ export const PlayerPage = () => {
 	}, []);
 
 	// Deletes a persisted annotation.
-	const handleDeleteAnnotation = useCallback(async (annotation) => {
-		try {
-			await deleteAnnotation(annotation);
-		} catch {
-			notify({ fileId, type: "error", message: "Could not delete the annotation. Please try again." });
-		}
-	}, [fileId, notify]);
+	const handleDeleteAnnotation = useCallback(
+		async (annotation) => {
+			try {
+				await deleteAnnotation(annotation);
+			} catch {
+				notify({
+					fileId,
+					type: "error",
+					message:
+						"Could not delete the annotation. Please try again."
+				});
+			}
+		},
+		[fileId, notify]
+	);
 
 	const regionMenuAnnotation = regionMenuState?.region?.__annotation ?? null;
 
@@ -409,6 +445,10 @@ export const PlayerPage = () => {
 	});
 	useKeyboardShortcut("mod+e", handleApplyEffect, {
 		enabled: canApplyEffect
+	});
+
+	useKeyboardShortcut("k", playPause, {
+		enabled: isAudioReady
 	});
 
 	// Session is over screen
