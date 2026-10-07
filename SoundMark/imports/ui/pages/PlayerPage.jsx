@@ -53,6 +53,8 @@ import { useActivityNotifications } from "../hooks/useActivityNotifications";
 import { ScrubBar } from "../components/waveform/ScrubBar";
 import { buildRegionMenuItems } from "../lib/regionMenuItem";
 import { getPlaybackEffects } from "../utils/playbackEffects";
+import { ShortcutsHelp } from "../components/ShortcutHelp";
+import { getShortcutKeys } from "../lib/shortcuts";
 
 const EMPTY_MUTED_EFFECT_IDS = new Set();
 
@@ -437,17 +439,21 @@ export const PlayerPage = () => {
 		!effectRegion;
 
 	// Keyboard shortcuts for the region selection actions above.
-	useKeyboardShortcut("mod+a", handleCreateAnnotation, {
-		enabled: isAudioReady
-	});
-	useKeyboardShortcut("mod+d", handleDeleteRegion, {
+	useKeyboardShortcut(
+		getShortcutKeys("createAnnotation"),
+		handleCreateAnnotation,
+		{
+			enabled: isAudioReady
+		}
+	);
+	useKeyboardShortcut(getShortcutKeys("clearRegion"), handleDeleteRegion, {
 		enabled: isAudioReady && Boolean(activeRegion)
 	});
-	useKeyboardShortcut("mod+e", handleApplyEffect, {
+	useKeyboardShortcut(getShortcutKeys("applyEffect"), handleApplyEffect, {
 		enabled: canApplyEffect
 	});
 
-	useKeyboardShortcut("k", playPause, {
+	useKeyboardShortcut(getShortcutKeys("playPause"), playPause, {
 		enabled: isAudioReady
 	});
 
@@ -530,6 +536,7 @@ export const PlayerPage = () => {
 							</>
 						)}
 					</button>
+					<ShortcutsHelp />
 					<NotificationHistory />
 				</div>
 			</header>
