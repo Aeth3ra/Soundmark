@@ -6,6 +6,7 @@ import {
 	ANNOTATION_COLOURS,
 	DEFAULT_ANNOTATION_COLOUR
 } from "../../lib/annotationColours";
+import { ModalDialog } from "../ModalDialog";
 import {
 	createAnnotation,
 	updateAnnotation
@@ -70,7 +71,7 @@ export const AnnotationForm = ({ trigger, annotation, fileId, onClose }) => {
 	};
 
 	return (
-		<Shell accent={values.colour} label={copy.label}>
+		<Shell accent={values.colour} label={copy.label} onClose={onClose}>
 			<header className="flex items-start gap-3 px-6 pb-1 pt-5">
 				<input
 					type="text"
@@ -255,22 +256,19 @@ const toFormValues = ({ start, end, ...details }) => ({
 
 // -- COMPONENENTS --
 
-const Shell = ({ accent, label, children }) => (
-	<div className="fixed inset-0 z-50 grid place-items-center bg-base-content/25 p-4 backdrop-blur-[2px]">
+const Shell = ({ accent, label, onClose, children }) => (
+	<ModalDialog
+		label={label}
+		onClose={onClose}
+		className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl p-0"
+	>
+		{/* The annotation's own colour, so you can see what you're making */}
 		<div
-			role="dialog"
-			aria-modal="true"
-			aria-label={label}
-			className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-base-100 shadow-2xl ring-1 ring-base-content/10"
-		>
-			{/* The annotation's own colour, so you can see what you're making */}
-			<div
-				className="h-1.5 shrink-0 transition-colors"
-				style={{ backgroundColor: accent }}
-			/>
-			{children}
-		</div>
-	</div>
+			className="h-1.5 shrink-0 transition-colors"
+			style={{ backgroundColor: accent }}
+		/>
+		{children}
+	</ModalDialog>
 );
 
 const Section = ({ title, children }) => (
@@ -418,7 +416,11 @@ const TagPicker = ({ selected, onChange }) => {
 };
 
 const NoRegion = ({ onClose }) => (
-	<Shell accent={DEFAULT_ANNOTATION_COLOUR} label="No region selected">
+	<Shell
+		accent={DEFAULT_ANNOTATION_COLOUR}
+		label="No region selected"
+		onClose={onClose}
+	>
 		<div className="flex flex-col gap-5 p-6">
 			<div>
 				<h2 className="text-lg font-semibold">No region selected</h2>
