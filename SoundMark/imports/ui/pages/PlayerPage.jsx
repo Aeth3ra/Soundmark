@@ -57,6 +57,7 @@ import { ShortcutsHelp } from "../components/ShortcutHelp";
 import { getShortcutKeys } from "../lib/shortcuts";
 
 const EMPTY_MUTED_EFFECT_IDS = new Set();
+const SEEK_STEP_SECONDS = 2.5;
 
 export const PlayerPage = () => {
 	const { fileId } = useParams();
@@ -438,6 +439,24 @@ export const PlayerPage = () => {
 		isAudioReady &&
 		!effectRegion;
 
+	const handleSkip = useCallback(
+		(delta) => {
+			if (!(duration > 0)) return;
+			const target = Math.min(Math.max(currentTime + delta, 0), duration);
+			seekTo(target / duration);
+		},
+		[currentTime, duration, seekTo]
+	);
+
+	const handleSkipBackward = useCallback(
+		() => handleSkip(-SEEK_STEP_SECONDS),
+		[handleSkip]
+	);
+	const handleSkipForward = useCallback(
+		() => handleSkip(SEEK_STEP_SECONDS),
+		[handleSkip]
+	);
+
 	// Keyboard shortcuts for the region selection actions above.
 	useKeyboardShortcut(
 		getShortcutKeys("createAnnotation"),
@@ -454,6 +473,12 @@ export const PlayerPage = () => {
 	});
 
 	useKeyboardShortcut(getShortcutKeys("playPause"), playPause, {
+		enabled: isAudioReady
+	});
+	useKeyboardShortcut(getShortcutKeys("seekBackwards"), handleSkipBackward, {
+		enabled: isAudioReady
+	});
+	useKeyboardShortcut(getShortcutKeys("seekForwards"), handleSkipForward, {
 		enabled: isAudioReady
 	});
 

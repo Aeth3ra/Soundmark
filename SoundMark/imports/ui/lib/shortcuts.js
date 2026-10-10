@@ -4,7 +4,19 @@ export const SHORTCUT_GROUPS = [
 	{
 		id: "playback",
 		title: "Playback",
-		shortcuts: [{ id: "playPause", keys: "k", description: "Play / pause" }]
+		shortcuts: [
+			{ id: "playPause", keys: "k", description: "Play / pause" },
+			{
+				id: "seekBackwards",
+				keys: "j",
+				description: "Seek -2.5s backwards"
+			},
+			{
+				id: "seekForwards",
+				keys: "l",
+				description: "Seek +2.5s backwards"
+			}
+		]
 	},
 	{
 		id: "regions",
