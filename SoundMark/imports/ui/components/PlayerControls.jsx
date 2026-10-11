@@ -73,7 +73,7 @@ export const PlayerControls = ({
 		<>
 			<fieldset
 				disabled={disabled}
-				className="flex flex-wrap items-center gap-4"
+				className="flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-3"
 			>
 				{/* Play / Pause */}
 				<button
@@ -115,7 +115,7 @@ export const PlayerControls = ({
 				</span>
 
 				{/* Playback speed */}
-				<label className="flex shrink-0 items-center gap-2 text-sm text-base-content/70">
+				<label className="flex min-w-0 max-w-full flex-wrap items-center gap-2 text-sm text-base-content/70">
 					Speed:
 					<span
 						className="tabular-nums"
@@ -166,7 +166,7 @@ export const PlayerControls = ({
 				</label>
 
 				{/* Zoom */}
-				<div className="flex shrink-0 items-center gap-2 w-36">
+				<div className="flex w-36 min-w-0 max-w-full items-center gap-2">
 					<ZoomIn className="h-4 w-4 text-base-content/50 shrink-0" />
 					<input
 						type="range"
@@ -177,12 +177,12 @@ export const PlayerControls = ({
 						onInput={(e) =>
 							onZoomChange(parseFloat(e.target.value))
 						}
-						className="range range-primary range-xs"
+						className="range range-primary range-xs min-w-0 flex-1"
 					/>
 				</div>
 
 				{/* Volume */}
-				<div className="flex shrink-0 items-center gap-2 ml-auto w-36">
+				<div className="flex w-36 min-w-0 max-w-full items-center gap-2">
 					<Volume2 className="h-4 w-4 text-base-content/50 shrink-0" />
 					<input
 						type="range"
@@ -193,7 +193,7 @@ export const PlayerControls = ({
 						onChange={(e) =>
 							onVolumeChange(parseFloat(e.target.value))
 						}
-						className="range range-primary range-xs"
+						className="range range-primary range-xs min-w-0 flex-1"
 					/>
 				</div>
 			</fieldset>

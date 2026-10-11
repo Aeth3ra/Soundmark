@@ -510,8 +510,8 @@ export const PlayerPage = () => {
 	return (
 		<div className="h-screen flex flex-col bg-base-300">
 			{/* Top header: logo + back/share */}
-			<header className="flex flex-wrap gap-3 items-center justify-between px-6 py-4 border-b border-base-300 bg-base-100">
-				<div className="flex items-center gap-3">
+			<header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-base-300 bg-base-100 px-3 py-4 sm:px-6">
+				<div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
 					<button
 						onClick={() => navigate("/")}
 						className="btn btn-ghost btn-sm gap-2"
@@ -527,7 +527,7 @@ export const PlayerPage = () => {
 					/>
 					<span className="text-lg font-bold">Soundmark</span>
 				</div>
-				<div className="flex flex-wrap justify-end items-center gap-3">
+				<div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-3">
 					{/* Host indicator - only shown to the host themselves */}
 					{isHost && (
 						<span
@@ -602,45 +602,48 @@ export const PlayerPage = () => {
 									</button>
 								</div>
 							)}
-							{/* Toolbar  */}
-							<div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 border-b border-base-300 bg-base-100">
-								<PlayerControls
-									key={fileId}
-									disabled={!isAudioReady}
-									isPlaying={isPlaying}
-									isLooping={isLooping}
-									playbackRate={playbackRate}
-									currentTime={currentTime}
-									duration={duration}
-									zoom={zoom}
-									onPlayPause={playPause}
-									onToggleLoop={toggleLoop}
-									onPlaybackRateChange={setPlaybackRate}
-									onVolumeChange={setVolume}
-									onZoomChange={setZoom}
-								/>
-								{/* Region time display */}
-								<RegionSelectionDisplay
-									activeRegion={activeRegion}
-									analysis={regionAnalysis}
-								/>
-								<div className="flex-1" />
-								<div className="flex shrink-0 items-center gap-6">
-									<SyncStatusToggle
-										targetUser={targetUser}
-										onUnlock={stopFollowing}
-									/>
-									<AudioExportButton
-										fileId={fileId}
-										effects={effects}
-									/>
-									<ProjectPackageExportButton
-										fileId={fileId}
-										annotations={annotations}
-										effects={effects}
-									/>
-								</div>
-							</div>
+
+                            {/* Toolbar */}
+                            <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-b border-base-300 bg-base-100 px-3 py-3 sm:px-6">
+                                <PlayerControls
+                                    key={fileId}
+                                    disabled={!isAudioReady}
+                                    isPlaying={isPlaying}
+                                    isLooping={isLooping}
+                                    playbackRate={playbackRate}
+                                    currentTime={currentTime}
+                                    duration={duration}
+                                    zoom={zoom}
+                                    onPlayPause={playPause}
+                                    onToggleLoop={toggleLoop}
+                                    onPlaybackRateChange={setPlaybackRate}
+                                    onVolumeChange={setVolume}
+                                    onZoomChange={setZoom}
+                                />
+
+                                <RegionSelectionDisplay
+                                    activeRegion={activeRegion}
+                                    analysis={regionAnalysis}
+                                />
+
+                                <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-3">
+                                    <SyncStatusToggle
+                                        targetUser={targetUser}
+                                        onUnlock={stopFollowing}
+                                    />
+
+                                    <AudioExportButton
+                                        fileId={fileId}
+                                        effects={effects}
+                                    />
+
+                                    <ProjectPackageExportButton
+                                        fileId={fileId}
+                                        annotations={annotations}
+                                        effects={effects}
+                                    />
+                                </div>
+                            </div>							
 
 							{/* Waveform  */}
 							<div
