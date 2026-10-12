@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { formatTime } from "../utils/time";
 
 const AnalysisChip = ({ label, value, isAnalysing }) => (
@@ -22,7 +22,7 @@ const DetailRow = ({ label, value }) => (
 	</div>
 );
 
-export const RegionSelectionDisplay = ({ activeRegion, analysis }) => {
+export const RegionSelectionDisplay = ({ activeRegion, analysis, onClear }) => {
 	const hasSelection = Boolean(activeRegion);
 	const [showDetail, setShowDetail] = useState(false);
 
@@ -97,6 +97,18 @@ export const RegionSelectionDisplay = ({ activeRegion, analysis }) => {
 									isAnalysing={analysis?.isAnalysing}
 								/>
 							</>
+						)}
+
+						{onClear && (
+							<button
+								type="button"
+								onClick={onClear}
+								className="ml-auto rounded p-0.5 text-base-content/40 transition-colors hover:text-base-content"
+								title="Clear region (Ctrl/Cmd+D)"
+								aria-label="Clear region"
+							>
+								<X className="h-3.5 w-3.5" />
+							</button>
 						)}
 					</>
 				) : (
