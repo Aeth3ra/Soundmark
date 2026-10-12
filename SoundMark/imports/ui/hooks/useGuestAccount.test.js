@@ -6,66 +6,76 @@ import sinon from "sinon";
 import { useGuestAccount } from "./useGuestAccount";
 
 if (Meteor.isClient) {
-  describe("useGuestAccount", function () {
-    let userIdStub;
-    let userStub;
-    let loggingInStub;
-    let callLoginMethodStub;
+	describe("useGuestAccount", function () {
+		let userIdStub;
+		let userStub;
+		let loggingInStub;
+		let callLoginMethodStub;
+		let meteorCallStub;
 
-    beforeEach(function () {
-      userIdStub = sinon.stub(Meteor, "userId");
-      userStub = sinon.stub(Meteor, "user");
-      loggingInStub = sinon.stub(Meteor, "loggingIn");
-      callLoginMethodStub = sinon.stub(Accounts, "callLoginMethod");
-    });
+		beforeEach(function () {
+			userIdStub = sinon.stub(Meteor, "userId");
+			userStub = sinon.stub(Meteor, "user");
+			loggingInStub = sinon.stub(Meteor, "loggingIn");
+			callLoginMethodStub = sinon.stub(Accounts, "callLoginMethod");
 
-    afterEach(function () {
-      sinon.restore();
-    });
+			// Stub Meteor.call so that getUser() resolves successfully in tests
+			meteorCallStub = sinon
+				.stub(Meteor, "call")
+				.callsFake((name, ...args) => {
+					const callback = args[args.length - 1];
+					if (typeof callback === "function") {
+						callback(null, {});
+					}
+				});
+		});
 
-    it("triggers guest login automatically if unauthenticated", function () {
-      userIdStub.returns(null);
-      userStub.returns(null);
-      loggingInStub.returns(false);
+		afterEach(function () {
+			sinon.restore();
+		});
 
-      renderHook(() => useGuestAccount());
+		it("triggers guest login automatically if unauthenticated", function () {
+			userIdStub.returns(null);
+			userStub.returns(null);
+			loggingInStub.returns(false);
 
-      assert.isTrue(callLoginMethodStub.calledOnce);
-    });
+			renderHook(() => useGuestAccount());
 
-    it("returns user details and isReady=true when logged in", async function () {
-      userIdStub.returns("user-123");
-      userStub.returns({ profile: { name: "Guest User" } });
-      loggingInStub.returns(false);
+			assert.isTrue(callLoginMethodStub.calledOnce);
+		});
 
-      const { result } = renderHook(() => useGuestAccount());
+		it("returns user details and isReady=true when logged in", async function () {
+			userIdStub.returns("user-123");
+			userStub.returns({ profile: { name: "Guest User" } });
+			loggingInStub.returns(false);
 
-      assert.equal(result.current.userId, "user-123");
-      assert.equal(result.current.name, "Guest User");
-      await waitFor(() => {
-        assert.isTrue(result.current.isReady);
-      });
+			const { result } = renderHook(() => useGuestAccount());
 
-      assert.isFalse(callLoginMethodStub.called);
-    });
+			assert.equal(result.current.userId, "user-123");
+			assert.equal(result.current.name, "Guest User");
 
-    it("captures login errors if guest login fails", async function () {
-      const error = new Error("Login failed");
-      userIdStub.returns(null);
-      userStub.returns(null);
-      loggingInStub.returns(false);
+			await waitFor(() => {
+				assert.isTrue(result.current.isReady);
+			});
 
-      callLoginMethodStub.callsFake(({ userCallback }) => {
-        userCallback(error);
-      });
+			assert.isFalse(callLoginMethodStub.called);
+		});
 
-      const { result } = renderHook(() => useGuestAccount());
+		it("captures login errors if guest login fails", async function () {
+			const error = new Error("Login failed");
+			userIdStub.returns(null);
+			userStub.returns(null);
+			loggingInStub.returns(false);
 
-      await act(async () => {
-        await Promise.resolve();
-      });
+			callLoginMethodStub.callsFake(({ userCallback }) => {
+				userCallback(error);
+			});
 
-      assert.equal(result.current.loginError, error);
-    });
-  });
+			const { result } = renderHook(() => useGuestAccount());
+
+			await waitFor(() => {
+				assert.equal(result.current.loginError, error);
+			});
+		});
+	});
 }

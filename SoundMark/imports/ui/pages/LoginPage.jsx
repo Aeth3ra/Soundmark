@@ -1,8 +1,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { setDisplayName } from "../services/userService";
+import { useGuestAccount } from "../hooks/useGuestAccount";
 
 export const LoginPage = () => {
+  // This route is also reachable directly, without RequireGuestName starting a session.
+  const { userId, isReady, loginError } = useGuestAccount();
+  const canSave = Boolean(userId && isReady && !loginError);
   const [draftName, setDraftName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -11,6 +15,7 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving || !canSave) return;
     setError(null);
     setSaving(true);
 
@@ -50,16 +55,22 @@ export const LoginPage = () => {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={saving || !draftName.trim()}
+              disabled={saving || !canSave || !draftName.trim()}
             >
               {saving ? (
                 <span className="loading loading-spinner loading-sm"></span>
+              ) : !canSave && !loginError ? (
+                "Connecting…"
               ) : (
                 "Continue"
               )}
             </button>
           </div>
-          {error && <p className="text-error text-sm mt-4">{error}</p>}
+          {(error || loginError) && (
+            <p role="alert" className="text-error text-sm mt-4">
+              {error || "Couldn't start your session. Refresh and try again."}
+            </p>
+          )}
         </form>
       </div>
     </div>

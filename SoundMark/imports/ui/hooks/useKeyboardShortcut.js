@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 
 const MODIFIER_TOKENS = new Set(["mod", "ctrl", "shift", "alt", "meta"]);
-
+const isMac =
+	typeof window !== "undefined" &&
+	/Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 /**
  * "mod+a" -> { key: "a", mod: true, ctrl: false, shift: false, alt: false }
  *
@@ -20,18 +22,28 @@ export const parseCombo = (combo) => {
 		mod: tokens.includes("mod"),
 		ctrl: tokens.includes("ctrl"),
 		shift: tokens.includes("shift"),
-		alt: tokens.includes("alt")
+		alt: tokens.includes("alt"),
+		meta: tokens.includes("meta")
 	};
 };
 
 // Exact modifier matching, so "mod+a" does NOT fire on "mod+shift+a".
 export const comboMatchesEvent = (combo, event) => {
-	const modPressed = event.ctrlKey || event.metaKey;
+	const targetCtrl = combo.mod ? !isMac : combo.ctrl;
+	const targetMeta = combo.mod ? isMac : Boolean(combo.meta);
+
+	const normalizedEventKey = event.key.toLowerCase();
+	const normalizedEventCode = event.code
+		? event.code.toLowerCase().replace("key", "")
+		: "";
+
+	const keyMatches =
+		normalizedEventKey === combo.key || normalizedEventCode === combo.key;
 
 	return (
-		event.key.toLowerCase() === combo.key &&
-		modPressed === combo.mod &&
-		event.ctrlKey === (combo.ctrl || combo.mod ? event.ctrlKey : false) &&
+		keyMatches &&
+		event.ctrlKey === targetCtrl &&
+		event.metaKey === targetMeta &&
 		event.shiftKey === combo.shift &&
 		event.altKey === combo.alt
 	);

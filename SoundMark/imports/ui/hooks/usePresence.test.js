@@ -65,6 +65,13 @@ if (Meteor.isClient) {
       assert.property(result.current.others[0], "color");
     });
 
+    it("keeps server membership when a collaborator playhead becomes stale", function () {
+      findStub.returns({ fetch: () => [{ userId: "user-2", updatedAt: new Date(Date.now() - 60000) }] });
+      const { result } = renderHook(() => usePresence({ fileId: "file-123", identity: { userId: "user-1" }, position: 0 }));
+      assert.isEmpty(result.current.others);
+      assert.equal(result.current.participants[0].userId, "user-2");
+    });
+
     it("sends heartbeat updates periodically while active", function () {
       renderHook(() =>
         usePresence({

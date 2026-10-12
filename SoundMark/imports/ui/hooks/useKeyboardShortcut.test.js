@@ -19,7 +19,8 @@ if (Meteor.isClient) {
 					mod: false,
 					ctrl: false,
 					shift: false,
-					alt: false
+					alt: false,
+					meta: false
 				});
 			});
 
@@ -30,7 +31,8 @@ if (Meteor.isClient) {
 					mod: true,
 					ctrl: false,
 					shift: true,
-					alt: false
+					alt: false,
+					meta: false
 				});
 			});
 
@@ -41,7 +43,8 @@ if (Meteor.isClient) {
 					mod: false,
 					ctrl: true,
 					shift: false,
-					alt: true
+					alt: true,
+					meta: false
 				});
 			});
 		});
@@ -49,10 +52,12 @@ if (Meteor.isClient) {
 		describe("comboMatchesEvent", function () {
 			it("matches exactly when correct modifiers and key are pressed", function () {
 				const combo = parseCombo("mod+shift+z");
+				// Depending on platform, "mod" resolves to ctrlKey (non-Mac) or metaKey (Mac)
+				const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 				const fakeEvent = {
 					key: "z",
-					metaKey: true, // "mod" allows metaKey or ctrlKey
-					ctrlKey: false,
+					ctrlKey: !isMac,
+					metaKey: isMac,
 					shiftKey: true,
 					altKey: false
 				};
@@ -61,10 +66,11 @@ if (Meteor.isClient) {
 
 			it("fails if an extra modifier is pressed (exact matching)", function () {
 				const combo = parseCombo("mod+z");
+				const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 				const fakeEvent = {
 					key: "z",
-					metaKey: true,
-					ctrlKey: false,
+					ctrlKey: !isMac,
+					metaKey: isMac,
 					shiftKey: true, // Extra modifier!
 					altKey: false
 				};
@@ -118,11 +124,13 @@ if (Meteor.isClient) {
 
 		it("fires the handler when the shortcut is pressed", function () {
 			const handlerSpy = sinon.spy();
+			const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 			renderHook(() => useKeyboardShortcut("mod+s", handlerSpy));
 
 			const event = new KeyboardEvent("keydown", {
 				key: "s",
-				metaKey: true
+				ctrlKey: !isMac,
+				metaKey: isMac
 			});
 			// Stub preventDefault to track it
 			event.preventDefault = sinon.spy();
@@ -137,13 +145,18 @@ if (Meteor.isClient) {
 
 		it("does not fire when disabled", function () {
 			const handlerSpy = sinon.spy();
+			const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 			renderHook(() =>
 				useKeyboardShortcut("mod+s", handlerSpy, { enabled: false })
 			);
 
 			act(() => {
 				window.dispatchEvent(
-					new KeyboardEvent("keydown", { key: "s", metaKey: true })
+					new KeyboardEvent("keydown", {
+						key: "s",
+						ctrlKey: !isMac,
+						metaKey: isMac
+					})
 				);
 			});
 

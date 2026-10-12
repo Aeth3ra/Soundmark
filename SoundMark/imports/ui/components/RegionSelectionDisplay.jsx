@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { formatTime } from "../utils/time";
 
 const AnalysisChip = ({ label, value, isAnalysing }) => (
@@ -22,7 +22,7 @@ const DetailRow = ({ label, value }) => (
 	</div>
 );
 
-export const RegionSelectionDisplay = ({ activeRegion, analysis }) => {
+export const RegionSelectionDisplay = ({ activeRegion, analysis, onClear }) => {
 	const hasSelection = Boolean(activeRegion);
 	const [showDetail, setShowDetail] = useState(false);
 
@@ -41,13 +41,13 @@ export const RegionSelectionDisplay = ({ activeRegion, analysis }) => {
 		analysis?.key != null;
 
 	return (
-		<div className="relative shrink-0">
+		<div className="relative min-w-0 max-w-full">
 			<div
-				className={`flex shrink-0 items-center gap-3 whitespace-nowrap rounded-box bg-primary/10 px-3 py-1.5 text-sm transition-colors duration-150 ${
-					hasSelection
-						? "border-l-base-content/30 bg-base-200/70"
-						: "border-l-base-300 bg-base-200/40"
-				}`}
+				className={`flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-box bg-primary/10 px-3 py-1.5 text-sm transition-colors duration-150 ${
+                    hasSelection
+                        ? "border-l-base-content/30 bg-base-200/70"
+                        : "border-l-base-300 bg-base-200/40"
+                }`}
 			>
 				{hasSelection ? (
 					<>
@@ -97,6 +97,18 @@ export const RegionSelectionDisplay = ({ activeRegion, analysis }) => {
 									isAnalysing={analysis?.isAnalysing}
 								/>
 							</>
+						)}
+
+						{onClear && (
+							<button
+								type="button"
+								onClick={onClear}
+								className="ml-auto rounded p-0.5 text-base-content/40 transition-colors hover:text-base-content"
+								title="Clear region (Ctrl/Cmd+D)"
+								aria-label="Clear region"
+							>
+								<X className="h-3.5 w-3.5" />
+							</button>
 						)}
 					</>
 				) : (

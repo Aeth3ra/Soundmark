@@ -8,7 +8,7 @@ import {
 } from "../utils/projectPackage";
 import { Meteor } from "meteor/meteor";
 import { useGuestAccount } from "../hooks/useGuestAccount";
-import { SessionEndedToast } from "../components/SessionEndToast";
+import { SessionEndedToast } from "../components/notifications/SessionEndToast";
 import { EditableName } from "../components/EditableName";
 
 export const UploadPage = () => {

@@ -28,11 +28,13 @@ if (Meteor.isClient) {
         );
       });
 
-      it("logs an error if Meteor.callAsync throws synchronously", async function () {
+      it("logs and rethrows if Meteor.callAsync throws synchronously", async function () {
         const fakeError = new Error("Network error");
         callAsyncStub.throws(fakeError);
 
-        await deleteAnnotation({ _id: "ann-123" });
+        let caught;
+        try { await deleteAnnotation({ _id: "ann-123" }); } catch (error) { caught = error; }
+        assert.strictEqual(caught, fakeError);
 
         assert.isTrue(
           consoleErrorStub.calledOnceWith(

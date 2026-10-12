@@ -1,8 +1,6 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
-import { RegionExportButton } from "../components/RegionExportButton";
-import { ProjectPackageExportButton } from "../components/ProjectPackageExportButton";
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
 import { EffectForm } from "../components/effects/EffectForm";
 import { EffectList } from "../components/effects/EffectList";
@@ -44,15 +42,25 @@ import { useSession } from "../hooks/useSession";
 import { WaveformDisplay } from "../components/waveform/WaveformDisplay";
 import { useWaveformSync } from "../hooks/useWaveformSync";
 import { SyncStatusToggle } from "../components/SyncStatusToggle";
-import { ToastError } from "../components/ToastError";
+import { useNotifications } from "../components/notifications/NotificationProvider";
+import { NotificationHistory } from "../components/notifications/NotificationHistory";
+import { useConnectionStatus } from "../hooks/useConnectionStatus";
+import { usePresenceNotifications } from "../hooks/usePresenceNotifications";
+import { useProcessingNotification } from "../hooks/useProcessingNotification";
+import { useActivityNotifications } from "../hooks/useActivityNotifications";
 import { ScrubBar } from "../components/waveform/ScrubBar";
 import { buildRegionMenuItems } from "../lib/regionMenuItem";
 import { getPlaybackEffects } from "../utils/playbackEffects";
+import { ShortcutsHelp } from "../components/ShortcutHelp";
+import { getShortcutKeys } from "../lib/shortcuts";
 
 const EMPTY_MUTED_EFFECT_IDS = new Set();
+const SEEK_STEP_SECONDS = 2.5;
 
 export const PlayerPage = () => {
 	const { fileId } = useParams();
+	const { notify } = useNotifications();
+	const connected = useConnectionStatus();
 	const location = useLocation();
 	const navigate = useNavigate();
 
@@ -63,7 +71,6 @@ export const PlayerPage = () => {
 	const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
 	const [isEffectsListOpen, setIsEffectsListOpen] = useState(false);
 	const [effectRegion, setEffectRegion] = useState(null);
-	const [effectActionError, setEffectActionError] = useState(null);
 	const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
 	const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
 	const [selectedTags, setSelectedTags] = useState([]);
@@ -78,7 +85,6 @@ export const PlayerPage = () => {
 	// A form opened for one file must not carry over to another file.
 	useEffect(() => {
 		setEffectRegion(null);
-		setEffectActionError(null);
 		setIsEffectsListOpen(false);
 	}, [fileId]);
 
@@ -102,8 +108,7 @@ export const PlayerPage = () => {
 	// Get user
 	const { userId, name, isReady } = useGuestAccount();
 	const mutedEffectIds =
-		localEffectMutes.fileId === fileId &&
-		localEffectMutes.userId === userId
+		localEffectMutes.fileId === fileId && localEffectMutes.userId === userId
 			? localEffectMutes.ids
 			: EMPTY_MUTED_EFFECT_IDS;
 	const toggleLocalEffect = (effectId) => {
@@ -237,7 +242,11 @@ export const PlayerPage = () => {
 	const isAuthorsLoading = useSubscribe("annotations.authorsForFile", fileId);
 
 	//Get presences of other users
-	const { others: otherUsers } = usePresence({
+	const {
+		others: otherUsers,
+		participants,
+		isLoading: isPresenceLoading
+	} = usePresence({
 		fileId,
 		identity,
 		position: currentTime,
@@ -268,8 +277,46 @@ export const PlayerPage = () => {
 		setPlaybackRate
 	});
 
+	usePresenceNotifications({
+		fileId,
+		others: participants,
+		ready: isReady && !isPresenceLoading(),
+		connected,
+		sessionEnded,
+		followingUserId,
+		stopFollowing
+	});
+	useProcessingNotification({
+		fileId,
+		isProcessing,
+		isAudioReady,
+		audioError,
+		audioVersion
+	});
+	useEffect(() => {
+		if (!syncError) return;
+		notify({ fileId, type: "error", message: syncError });
+		clearSyncError();
+	}, [fileId, syncError, clearSyncError, notify]);
+
 	// userId -> display name, for showing "who made this" on annotation cards
 	const userNames = useUserNames({ fileId, otherUsers, userId, name });
+
+	useActivityNotifications({
+		fileId,
+		userId,
+		annotations,
+		effects,
+		connected,
+		sessionEnded,
+		userNames,
+		ready: isReady && !isAnnotationsLoading() && !isEffectsLoading(),
+		onView: (kind, item) => {
+			setIsAnnotateListOpen(kind === "annotation");
+			setIsEffectsListOpen(kind === "effect");
+			if (duration > 0) seekTo(item.start / duration);
+		}
+	});
 
 	// Renders the annotations
 	const tooltipRef = useRef(null);
@@ -281,9 +328,18 @@ export const PlayerPage = () => {
 	// Copies the current link into the clipboard
 	const handleShare = async () => {
 		const url = `${window.location.origin}${location.pathname}${location.search}`;
-		await navigator.clipboard.writeText(url);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+		try {
+			await navigator.clipboard.writeText(url);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch {
+			notify({
+				fileId,
+				type: "error",
+				message:
+					"Could not copy the link. Copy the address from your browser instead."
+			});
+		}
 	};
 
 	// Seeks the waveform to a given time (seconds) when an annotation is clicked
@@ -323,12 +379,13 @@ export const PlayerPage = () => {
 
 	// Opens the effect form for the current selection.
 	const handleApplyEffect = useCallback(() => {
-		setEffectActionError(null);
-
 		if (!activeRegion) {
-			setEffectActionError(
-				"Select a region on the waveform before applying an effect."
-			);
+			notify({
+				fileId,
+				type: "error",
+				message:
+					"Select a region on the waveform before applying an effect."
+			});
 			return;
 		}
 
@@ -340,7 +397,7 @@ export const PlayerPage = () => {
 			start: activeRegion.start,
 			end: activeRegion.end
 		});
-	}, [activeRegion, closeAnnotation, fileId]);
+	}, [activeRegion, closeAnnotation, fileId, notify]);
 
 	// Deletes/clears the current region selection.
 	const handleDeleteRegion = useCallback(() => {
@@ -354,9 +411,21 @@ export const PlayerPage = () => {
 	}, []);
 
 	// Deletes a persisted annotation.
-	const handleDeleteAnnotation = useCallback(async (annotation) => {
-		await deleteAnnotation(annotation);
-	}, []);
+	const handleDeleteAnnotation = useCallback(
+		async (annotation) => {
+			try {
+				await deleteAnnotation(annotation);
+			} catch {
+				notify({
+					fileId,
+					type: "error",
+					message:
+						"Could not delete the annotation. Please try again."
+				});
+			}
+		},
+		[fileId, notify]
+	);
 
 	const regionMenuAnnotation = regionMenuState?.region?.__annotation ?? null;
 
@@ -367,15 +436,47 @@ export const PlayerPage = () => {
 		isAudioReady &&
 		!effectRegion;
 
+	const handleSkip = useCallback(
+		(delta) => {
+			if (!(duration > 0)) return;
+			const target = Math.min(Math.max(currentTime + delta, 0), duration);
+			seekTo(target / duration);
+		},
+		[currentTime, duration, seekTo]
+	);
+
+	const handleSkipBackward = useCallback(
+		() => handleSkip(-SEEK_STEP_SECONDS),
+		[handleSkip]
+	);
+	const handleSkipForward = useCallback(
+		() => handleSkip(SEEK_STEP_SECONDS),
+		[handleSkip]
+	);
+
 	// Keyboard shortcuts for the region selection actions above.
-	useKeyboardShortcut("mod+a", handleCreateAnnotation, {
-		enabled: isAudioReady
-	});
-	useKeyboardShortcut("mod+d", handleDeleteRegion, {
+	useKeyboardShortcut(
+		getShortcutKeys("createAnnotation"),
+		handleCreateAnnotation,
+		{
+			enabled: isAudioReady
+		}
+	);
+	useKeyboardShortcut(getShortcutKeys("clearRegion"), handleDeleteRegion, {
 		enabled: isAudioReady && Boolean(activeRegion)
 	});
-	useKeyboardShortcut("mod+e", handleApplyEffect, {
+	useKeyboardShortcut(getShortcutKeys("applyEffect"), handleApplyEffect, {
 		enabled: canApplyEffect
+	});
+
+	useKeyboardShortcut(getShortcutKeys("playPause"), playPause, {
+		enabled: isAudioReady
+	});
+	useKeyboardShortcut(getShortcutKeys("seekBackwards"), handleSkipBackward, {
+		enabled: isAudioReady
+	});
+	useKeyboardShortcut(getShortcutKeys("seekForwards"), handleSkipForward, {
+		enabled: isAudioReady
 	});
 
 	// Session is over screen
@@ -406,8 +507,8 @@ export const PlayerPage = () => {
 	return (
 		<div className="h-screen flex flex-col bg-base-300">
 			{/* Top header: logo + back/share */}
-			<header className="flex items-center justify-between px-6 py-4 border-b border-base-300 bg-base-100">
-				<div className="flex items-center gap-3">
+			<header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-base-300 bg-base-100 px-3 py-4 sm:px-6">
+				<div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
 					<button
 						onClick={() => navigate("/")}
 						className="btn btn-ghost btn-sm gap-2"
@@ -423,7 +524,7 @@ export const PlayerPage = () => {
 					/>
 					<span className="text-lg font-bold">Soundmark</span>
 				</div>
-				<div className="flex items-center gap-3">
+				<div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-3">
 					{/* Host indicator - only shown to the host themselves */}
 					{isHost && (
 						<span
@@ -457,6 +558,7 @@ export const PlayerPage = () => {
 							</>
 						)}
 					</button>
+					<NotificationHistory />
 				</div>
 			</header>
 
@@ -496,8 +598,9 @@ export const PlayerPage = () => {
 									</button>
 								</div>
 							)}
-							{/* Toolbar  */}
-							<div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 border-b border-base-300 bg-base-100">
+
+							{/* Toolbar */}
+							<div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-b border-base-300 bg-base-100 px-3 py-3 sm:px-6">
 								<PlayerControls
 									key={fileId}
 									disabled={!isAudioReady}
@@ -513,25 +616,25 @@ export const PlayerPage = () => {
 									onVolumeChange={setVolume}
 									onZoomChange={setZoom}
 								/>
-								{/* Region time display */}
+
 								<RegionSelectionDisplay
 									activeRegion={activeRegion}
 									analysis={regionAnalysis}
+									onClear={handleDeleteRegion}
 								/>
-								<div className="flex-1" />
-								<div className="flex shrink-0 items-center gap-6">
+
+								<div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-3">
 									<SyncStatusToggle
 										targetUser={targetUser}
 										onUnlock={stopFollowing}
 									/>
+
 									<AudioExportButton
 										fileId={fileId}
 										effects={effects}
-									/>
-									<ProjectPackageExportButton
-										fileId={fileId}
 										annotations={annotations}
-										effects={effects}
+										activeRegion={activeRegion}
+										isEffectsLoading={isEffectsLoading()}
 									/>
 								</div>
 							</div>
@@ -566,52 +669,6 @@ export const PlayerPage = () => {
 										/>
 									</div>
 								</div>
-							</div>
-
-							{/* Region selection actions */}
-							<div className="flex items-center gap-2 self-start ml-6 mb-4">
-								<button
-									onClick={handleCreateAnnotation}
-									className="btn btn-sm btn-outline gap-2"
-									title="Create annotation (Ctrl/Cmd+A)"
-								>
-									Create annotation
-								</button>
-
-								<button
-									type="button"
-									disabled={!canApplyEffect}
-									onClick={handleApplyEffect}
-									className="btn btn-sm btn-outline"
-									title="Apply effect (Ctrl/Cmd+E)"
-								>
-									Apply effect
-								</button>
-
-								<button
-									onClick={handleDeleteRegion}
-									disabled={!activeRegion}
-									className="btn btn-sm btn-outline gap-2"
-									title="Clear region (Ctrl/Cmd+D)"
-								>
-									Clear region
-								</button>
-
-								<RegionExportButton
-									fileId={fileId}
-									activeRegion={activeRegion}
-									effects={effects}
-									isEffectsLoading={isEffectsLoading()}
-								/>
-
-								{effectActionError && (
-									<p
-										role="alert"
-										className="text-error text-sm"
-									>
-										{effectActionError}
-									</p>
-								)}
 							</div>
 						</>
 					)}
@@ -650,6 +707,9 @@ export const PlayerPage = () => {
 							</span>
 						)}
 					</button>
+					<div className="mt-auto">
+						<ShortcutsHelp />
+					</div>
 				</div>
 
 				{/* Annotations sidebar */}
@@ -665,6 +725,7 @@ export const PlayerPage = () => {
 					onToggleHidden={toggleAnnotationHidden}
 					userNames={userNames}
 					onEdit={handleEditAnnotation}
+					onCreate={handleCreateAnnotation}
 					analyses={annotationAnalyses}
 				/>
 
@@ -679,6 +740,8 @@ export const PlayerPage = () => {
 					onSeek={handleSeekToAnnotation}
 					userId={userId}
 					isHost={isHost}
+					onApply={handleApplyEffect}
+					canApply={canApplyEffect}
 				/>
 			</div>
 
@@ -731,13 +794,6 @@ export const PlayerPage = () => {
 					canApplyEffect,
 					onDeleteRegion: handleDeleteRegion
 				})}
-			/>
-
-			{/* Render the generic toast at the bottom of the page */}
-			<ToastError
-				message={syncError}
-				onClose={clearSyncError}
-				autoDismissMs={5000}
 			/>
 		</div>
 	);

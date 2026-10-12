@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { EffectCard } from "./EffectCard";
 
 export const EffectList = ({
@@ -9,6 +9,8 @@ export const EffectList = ({
   onSeek,
   userId,
   isHost,
+  onApply,
+  canApply = true,
   mutedEffectIds,
   onToggleLocalEffect,
   userNames
@@ -30,14 +32,28 @@ export const EffectList = ({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close effects"
-            className="btn btn-ghost btn-sm btn-circle"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onApply && (
+              <button
+                type="button"
+                onClick={onApply}
+                disabled={!canApply}
+                className="btn btn-primary btn-sm gap-1"
+                title="Apply effect to selection (Ctrl/Cmd+E)"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Apply
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close effects"
+              className="btn btn-ghost btn-sm btn-circle"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -50,7 +66,7 @@ export const EffectList = ({
             </p>
           ) : effects.length === 0 ? (
             <p className="p-5 text-sm text-base-content/60">
-              No effects yet. Select a region and choose Apply effect.
+              No effects yet. Select a region and press Apply.
             </p>
           ) : (
             <ul className="flex flex-col gap-2 p-3">
