@@ -71,7 +71,6 @@ export const PlayerPage = () => {
 	const [isAnnotateListOpen, setIsAnnotateListOpen] = useState(false);
 	const [isEffectsListOpen, setIsEffectsListOpen] = useState(false);
 	const [effectRegion, setEffectRegion] = useState(null);
-	const [effectActionError, setEffectActionError] = useState(null);
 	const { trigger, openAnnotation, closeAnnotation } = useAnnotationTrigger();
 	const [hiddenAnnotationIds, setHiddenAnnotationIds] = useState(new Set());
 	const [selectedTags, setSelectedTags] = useState([]);
@@ -86,7 +85,6 @@ export const PlayerPage = () => {
 	// A form opened for one file must not carry over to another file.
 	useEffect(() => {
 		setEffectRegion(null);
-		setEffectActionError(null);
 		setIsEffectsListOpen(false);
 	}, [fileId]);
 
@@ -381,12 +379,13 @@ export const PlayerPage = () => {
 
 	// Opens the effect form for the current selection.
 	const handleApplyEffect = useCallback(() => {
-		setEffectActionError(null);
-
 		if (!activeRegion) {
-			setEffectActionError(
-				"Select a region on the waveform before applying an effect."
-			);
+			notify({
+				fileId,
+				type: "error",
+				message:
+					"Select a region on the waveform before applying an effect."
+			});
 			return;
 		}
 
@@ -398,7 +397,7 @@ export const PlayerPage = () => {
 			start: activeRegion.start,
 			end: activeRegion.end
 		});
-	}, [activeRegion, closeAnnotation, fileId]);
+	}, [activeRegion, closeAnnotation, fileId, notify]);
 
 	// Deletes/clears the current region selection.
 	const handleDeleteRegion = useCallback(() => {
@@ -621,6 +620,7 @@ export const PlayerPage = () => {
 								<RegionSelectionDisplay
 									activeRegion={activeRegion}
 									analysis={regionAnalysis}
+									onClear={handleDeleteRegion}
 								/>
 
 								<div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-3">
@@ -669,45 +669,6 @@ export const PlayerPage = () => {
 										/>
 									</div>
 								</div>
-							</div>
-
-							{/* Region selection actions */}
-							<div className="flex items-center gap-2 self-start ml-6 mb-4">
-								<button
-									onClick={handleCreateAnnotation}
-									className="btn btn-sm btn-outline gap-2"
-									title="Create annotation (Ctrl/Cmd+A)"
-								>
-									Create annotation
-								</button>
-
-								<button
-									type="button"
-									disabled={!canApplyEffect}
-									onClick={handleApplyEffect}
-									className="btn btn-sm btn-outline"
-									title="Apply effect (Ctrl/Cmd+E)"
-								>
-									Apply effect
-								</button>
-
-								<button
-									onClick={handleDeleteRegion}
-									disabled={!activeRegion}
-									className="btn btn-sm btn-outline gap-2"
-									title="Clear region (Ctrl/Cmd+D)"
-								>
-									Clear region
-								</button>
-
-								{effectActionError && (
-									<p
-										role="alert"
-										className="text-error text-sm"
-									>
-										{effectActionError}
-									</p>
-								)}
 							</div>
 						</>
 					)}
@@ -764,6 +725,7 @@ export const PlayerPage = () => {
 					onToggleHidden={toggleAnnotationHidden}
 					userNames={userNames}
 					onEdit={handleEditAnnotation}
+					onCreate={handleCreateAnnotation}
 					analyses={annotationAnalyses}
 				/>
 
@@ -778,6 +740,8 @@ export const PlayerPage = () => {
 					onSeek={handleSeekToAnnotation}
 					userId={userId}
 					isHost={isHost}
+					onApply={handleApplyEffect}
+					canApply={canApplyEffect}
 				/>
 			</div>
 
