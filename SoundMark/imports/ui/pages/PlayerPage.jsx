@@ -561,7 +561,6 @@ export const PlayerPage = () => {
 							</>
 						)}
 					</button>
-					<ShortcutsHelp />
 					<NotificationHistory />
 				</div>
 			</header>
@@ -603,47 +602,47 @@ export const PlayerPage = () => {
 								</div>
 							)}
 
-                            {/* Toolbar */}
-                            <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-b border-base-300 bg-base-100 px-3 py-3 sm:px-6">
-                                <PlayerControls
-                                    key={fileId}
-                                    disabled={!isAudioReady}
-                                    isPlaying={isPlaying}
-                                    isLooping={isLooping}
-                                    playbackRate={playbackRate}
-                                    currentTime={currentTime}
-                                    duration={duration}
-                                    zoom={zoom}
-                                    onPlayPause={playPause}
-                                    onToggleLoop={toggleLoop}
-                                    onPlaybackRateChange={setPlaybackRate}
-                                    onVolumeChange={setVolume}
-                                    onZoomChange={setZoom}
-                                />
+							{/* Toolbar */}
+							<div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-b border-base-300 bg-base-100 px-3 py-3 sm:px-6">
+								<PlayerControls
+									key={fileId}
+									disabled={!isAudioReady}
+									isPlaying={isPlaying}
+									isLooping={isLooping}
+									playbackRate={playbackRate}
+									currentTime={currentTime}
+									duration={duration}
+									zoom={zoom}
+									onPlayPause={playPause}
+									onToggleLoop={toggleLoop}
+									onPlaybackRateChange={setPlaybackRate}
+									onVolumeChange={setVolume}
+									onZoomChange={setZoom}
+								/>
 
-                                <RegionSelectionDisplay
-                                    activeRegion={activeRegion}
-                                    analysis={regionAnalysis}
-                                />
+								<RegionSelectionDisplay
+									activeRegion={activeRegion}
+									analysis={regionAnalysis}
+								/>
 
-                                <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-3">
-                                    <SyncStatusToggle
-                                        targetUser={targetUser}
-                                        onUnlock={stopFollowing}
-                                    />
+								<div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-3">
+									<SyncStatusToggle
+										targetUser={targetUser}
+										onUnlock={stopFollowing}
+									/>
 
-                                    <AudioExportButton
-                                        fileId={fileId}
-                                        effects={effects}
-                                    />
+									<AudioExportButton
+										fileId={fileId}
+										effects={effects}
+									/>
 
-                                    <ProjectPackageExportButton
-                                        fileId={fileId}
-                                        annotations={annotations}
-                                        effects={effects}
-                                    />
-                                </div>
-                            </div>							
+									<ProjectPackageExportButton
+										fileId={fileId}
+										annotations={annotations}
+										effects={effects}
+									/>
+								</div>
+							</div>
 
 							{/* Waveform  */}
 							<div
@@ -759,6 +758,9 @@ export const PlayerPage = () => {
 							</span>
 						)}
 					</button>
+					<div className="mt-auto">
+						<ShortcutsHelp />
+					</div>
 				</div>
 
 				{/* Annotations sidebar */}
