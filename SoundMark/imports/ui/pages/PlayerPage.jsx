@@ -1,8 +1,6 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { PlayerControls } from "../components/PlayerControls";
 import { AudioExportButton } from "../components/AudioExportButton";
-import { RegionExportButton } from "../components/RegionExportButton";
-import { ProjectPackageExportButton } from "../components/ProjectPackageExportButton";
 import { AnnotationForm } from "../components/annotations/AnnotationForm";
 import { EffectForm } from "../components/effects/EffectForm";
 import { EffectList } from "../components/effects/EffectList";
@@ -634,12 +632,9 @@ export const PlayerPage = () => {
 									<AudioExportButton
 										fileId={fileId}
 										effects={effects}
-									/>
-
-									<ProjectPackageExportButton
-										fileId={fileId}
 										annotations={annotations}
-										effects={effects}
+										activeRegion={activeRegion}
+										isEffectsLoading={isEffectsLoading()}
 									/>
 								</div>
 							</div>
@@ -704,13 +699,6 @@ export const PlayerPage = () => {
 								>
 									Clear region
 								</button>
-
-								<RegionExportButton
-									fileId={fileId}
-									activeRegion={activeRegion}
-									effects={effects}
-									isEffectsLoading={isEffectsLoading()}
-								/>
 
 								{effectActionError && (
 									<p

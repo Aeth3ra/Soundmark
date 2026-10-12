@@ -1,8 +1,20 @@
 import { useNotifiedExport } from "../hooks/useNotifiedExport";
 import { ChevronDown } from "lucide-react";
-import { exportAudio, exportFullAudio } from "../services/audioService";
+import { exportAudio, exportFullAudio, exportRegion } from "../services/audioService";
+import { exportProjectPackage } from "../services/projectPackageService";
 
-export const AudioExportButton = ({ fileId, effects = [] }) => {
+/**
+ * Single Export menu: original audio, audio with effects, the selected
+ * region, and the re-importable project package. All items share one
+ * useNotifiedExport instance, so only one export runs at a time.
+ */
+export const AudioExportButton = ({
+	fileId,
+	effects = [],
+	annotations = [],
+	activeRegion = null,
+	isEffectsLoading = false
+}) => {
 	const { run, mode: exportingMode, isExporting } = useNotifiedExport(fileId);
 	const activeEffectCount = effects.filter((effect) => effect.enabled).length;
 	const runExport = (mode, action, errorMessage) => {
@@ -24,12 +36,36 @@ export const AudioExportButton = ({ fileId, effects = [] }) => {
 			"Could not export the audio with effects applied."
 		);
 
+	const handleExportSelection = () => {
+		if (!activeRegion || isEffectsLoading) return;
+		const options = { fileId, start: activeRegion.start, end: activeRegion.end, effects };
+		document.activeElement?.blur();
+		return run({
+			mode: "selection",
+			action: () => exportRegion(options),
+			pending: "Exporting selection…",
+			errorMessage: "Could not export the selected region."
+		});
+	};
+
+	const handleExportProject = () => {
+		document.activeElement?.blur();
+		return run({
+			mode: "project",
+			action: () => exportProjectPackage({ fileId, annotations, effects }),
+			pending: "Packaging project…",
+			errorMessage: "Could not export the project package."
+		});
+	};
+
 	const label =
 		exportingMode === "processed"
 			? "Rendering…"
-			: isExporting
-				? "Exporting…"
-				: "Export";
+			: exportingMode === "project"
+				? "Packaging…"
+				: isExporting
+					? "Exporting…"
+					: "Export";
 
 	return (
 		<div className="dropdown dropdown-end">
@@ -62,6 +98,20 @@ export const AudioExportButton = ({ fileId, effects = [] }) => {
 						{activeEffectCount === 0
 							? "With effects (none active)"
 							: `With effects (${activeEffectCount} active)`}
+					</button>
+				</li>
+				<li>
+					<button
+						type="button"
+						onClick={handleExportSelection}
+						disabled={!activeRegion || isEffectsLoading}
+					>
+						Export selection
+					</button>
+				</li>
+				<li>
+					<button type="button" onClick={handleExportProject}>
+						Export project
 					</button>
 				</li>
 			</ul>

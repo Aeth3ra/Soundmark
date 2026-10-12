@@ -4,8 +4,6 @@ import { assert } from "chai";
 import sinon from "sinon";
 import { NotificationProvider } from "./NotificationProvider";
 import { AudioExportButton } from "../AudioExportButton";
-import { RegionExportButton } from "../RegionExportButton";
-import { ProjectPackageExportButton } from "../ProjectPackageExportButton";
 
 if (Meteor.isClient) {
 	describe("export notifications", function () {
@@ -68,13 +66,13 @@ if (Meteor.isClient) {
 		it("keeps a region export disabled until a region and effects are ready", function () {
 			const { getByText, rerender } = render(
 				<NotificationProvider fileId="f">
-					<RegionExportButton fileId="f" />
+					<AudioExportButton fileId="f" />
 				</NotificationProvider>
 			);
 			assert.isTrue(getByText("Export selection").disabled);
 			rerender(
 				<NotificationProvider fileId="f">
-					<RegionExportButton
+					<AudioExportButton
 						fileId="f"
 						activeRegion={{ start: 0, end: 1 }}
 						isEffectsLoading
@@ -90,7 +88,7 @@ if (Meteor.isClient) {
 			fetchStub.rejects(new Error("Offline"));
 			const { getByText, getByRole } = render(
 				<NotificationProvider fileId="f">
-					<ProjectPackageExportButton
+					<AudioExportButton
 						fileId="f"
 						annotations={[]}
 						effects={[]}
