@@ -1,4 +1,4 @@
-import { X, Tag as TagIcon, Filter } from "lucide-react";
+import { X, Plus, Tag as TagIcon, Filter } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
 import { useMemo } from "react";
 export const AnnotationList = ({
@@ -12,6 +12,7 @@ export const AnnotationList = ({
   hiddenIds,
   onToggleHidden,
   onEdit,
+  onCreate,
   analyses = {},
   userNames = {}
 }) => {
@@ -49,13 +50,27 @@ export const AnnotationList = ({
                 : annotations.length}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost btn-sm btn-circle"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="btn btn-primary btn-sm gap-1"
+                title="Create annotation (Ctrl/Cmd+A)"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close annotations"
+              className="btn btn-ghost btn-sm btn-circle"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Tag filter chips */}
