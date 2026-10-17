@@ -11,7 +11,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  /* On CI, also print results to the job log. */
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
   use: {
     baseURL: 'http://localhost:3000',
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
@@ -30,7 +31,7 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    /* Meteor's first build can take well over the 60s default. */
-    timeout: 180_000,
+    /* Meteor's first build can take well over the 60s default, especially on a fresh CI machine. */
+    timeout: 300_000,
   },
 });

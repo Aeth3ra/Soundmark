@@ -47,7 +47,7 @@ test('the session ends for everyone when the host closes their tab', async ({ pa
 
   await host.close();
 
-  // A closed tab is noticed by the server's periodic presence sweep (every 15s).
+  // The server can take ~15s to notice a closed tab's connection has dropped.
   await expect(guest).toHaveURL('/', { timeout: 30_000 });
   await expect(guest.getByText('The host ended the session.')).toBeVisible();
 
