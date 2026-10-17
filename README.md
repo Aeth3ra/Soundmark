@@ -63,7 +63,6 @@ More detail in [`SoundMark/docs/TESTING.md`](./SoundMark/docs/TESTING.md).
 | [API.md](./SoundMark/docs/API.md) | Meteor methods, publications, and collections reference |
 | [FILE_STRUCTURE.md](./SoundMark/docs/FILE_STRUCTURE.md) | Directory layout and where to find things |
 | [TESTING.md](./SoundMark/docs/TESTING.md) | Unit, integration, and e2e tests; CI pipeline |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Workflow, conventions, and how to add an effect |
 
 ## Tech stack
 
