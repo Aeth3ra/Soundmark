@@ -98,7 +98,7 @@ Uploading a file creates a session. The first person to join becomes the **host*
 
 | Name           | Email                | GitHub        |
 | -------------- | -------------------- | ------------- |
-| Vanrick Nguyen | <vngu0104@gmail.com> | vanricknguyen |
+| Vanrick Nguyen | <vngu0104@student.monash.edu> | vanricknguyen |
 | Oliver Tan     | [email]              | DatKid321     |
 | Ritvik Sharma  | [email]              | Aeth3ra       |
 | Danny Wu       | [email]              | DanDom2019    |
