@@ -99,6 +99,6 @@ Uploading a file creates a session. The first person to join becomes the **host*
 | Name           | Authcate                | GitHub        |
 | -------------- | ----------------------- | ------------- |
 | Vanrick Nguyen | vngu0104                | vanricknguyen |
-| Oliver Tan     | [email]                 | DatKid321     |
+| Oliver Tan     | otan0006                | DatKid321     |
 | Ritvik Sharma  | rsha0068                | Aeth3ra       |
 | Danny Wu       | [email]                 | DanDom2019    |
