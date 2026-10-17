@@ -59,7 +59,7 @@ export const WaveformDisplay = ({
 		<div className="relative w-full flex flex-col gap-2">
 			{/* Waveform Canvas Container */}
 			<div className="relative w-full">
-				<div ref={containerRef} />
+				<div ref={containerRef} data-testid="waveform" />
 
 				<UserPresenceOverlay
 					users={otherUsers}
