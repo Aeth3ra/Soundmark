@@ -146,7 +146,12 @@ export async function cleanupStalePresence() {
 }
 
 if (Meteor.isServer) {
-	Meteor.setInterval(cleanupStalePresence, SWEEP_INTERVAL_MS);
+	// Catch here so a failed sweep (e.g. R2 unreachable) can't crash the server.
+	Meteor.setInterval(() => {
+		cleanupStalePresence().catch((err) => {
+			console.error("stale presence cleanup failed", err);
+		});
+	}, SWEEP_INTERVAL_MS);
 }
 
 if (Meteor.isServer) {
