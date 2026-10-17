@@ -36,6 +36,7 @@
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
     "@meteorjs/rspack": "^2.1.0",
+    "@playwright/test": "^1.64.1",
     "@rsdoctor/rspack-plugin": "^1.5.7",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
@@ -44,6 +45,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^26.6.5",
     "chai": "^6.2.2",
     "daisyui": "^5.7.11",
     "eslint": "^9.39.5",
