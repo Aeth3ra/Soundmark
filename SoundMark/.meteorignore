@@ -1,0 +1,7 @@
+# Playwright tests and their output. Without this, Meteor restarts whenever
+# a test run writes results, reloading every open browser mid-test.
+e2e/
+playwright.config.js
+test-results/
+playwright-report/
+blob-report/
