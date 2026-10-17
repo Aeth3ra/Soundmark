@@ -12,7 +12,10 @@ export default defineConfig([
       "**/_build/**",
       "**/dist/**",
       "**/build/**",
-      "**/coverage/**"
+      "**/coverage/**",
+      "test-results/**",
+      "playwright-report/**",
+      "blob-report/**"
     ]
   },
   {
