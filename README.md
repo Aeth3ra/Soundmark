@@ -97,8 +97,8 @@ Uploading a file creates a session. The first person to join becomes the **host*
 ## Team
 
 | Name           | Authcate                | GitHub        |
-| -------------- | -------------------- | ------------- |
-| Vanrick Nguyen | vngu0104 | vanricknguyen |
-| Oliver Tan     | [email]              | DatKid321     |
-| Ritvik Sharma  | [email]              | Aeth3ra       |
-| Danny Wu       | [email]              | DanDom2019    |
+| -------------- | ----------------------- | ------------- |
+| Vanrick Nguyen | vngu0104                | vanricknguyen |
+| Oliver Tan     | [email]                 | DatKid321     |
+| Ritvik Sharma  | rsha0068                | Aeth3ra       |
+| Danny Wu       | [email]                 | DanDom2019    |
