@@ -153,7 +153,7 @@ A session is one document in `sessions` whose `_id` **is the `fileId`**: `{ _id:
 
 - **Creation.** The first `presence.update` for a file with zero existing presences creates the session and makes the caller host. Using the file id as `_id` makes this race-safe: a duplicate-key error (code 11000) just means someone else won.
 - **Late joiners to a dead room.** If the session is gone but presence docs remain (host just left), `presence.update` is ignored so nobody can resurrect the session or claim host.
-- **Ending.** When the host leaves, `endSession` removes the session doc, all presence docs for that file, and the audio (R2 object and Mongo record). Other clients see the session end and are redirected home with a notice.
+- **Ending.** When the host leaves, `endSession` removes the session doc, all presence docs for that file, and the audio. `deleteAudioFile` deletes the R2 object, the Mongo record, and the file's annotations and effects. Other clients see the session end and are redirected home with a notice.
 
 ### Presence cleanup
 
@@ -190,9 +190,8 @@ See [Known limitations](#known-limitations) for what this means in practice.
 
 ## Known limitations
 
-These come from reading the current code and are worth knowing before you build on it.
+These come from reading the current code and are worth knowing before you build on it. Annotations and effects are cleaned up with the audio file, but data from sessions that ended before that was added may still be orphaned in MongoDB.
 
-- **Annotations and effects are not deleted when a session ends.** `endSession` removes the session, presence, and audio, but not the file's annotation and effect documents, which remain orphaned in MongoDB.
 - **Audio methods don't check login or membership.** Anyone who knows a `fileId` can request its URLs or delete it. Treat session links as secrets.
 - **Annotation edit and delete aren't owner-restricted**, unlike effects.
 - **Sessions are ephemeral by design.** There's no persistence once the host leaves; use project packages to keep work.
