@@ -1,6 +1,13 @@
 import Meyda from "meyda";
 
-// Measure every sample across all channels, without mixing channels to mono.
+/**
+ * Measures the RMS level and absolute peak amplitude across all channels
+ * of an AudioBuffer without mixing down to mono.
+ *
+ * @param {AudioBuffer} audioBuffer - Decoded audio buffer to analyze.
+ * @returns {{ rms: number, peak: number }} Measured RMS energy and peak amplitude.
+ * @throws {Error} If the buffer is empty, contains non-finite samples, or RMS cannot be computed.
+ */
 export function measureAudioBuffer(audioBuffer) {
 	if (!audioBuffer?.length || !audioBuffer.numberOfChannels) {
 		throw new Error("Audio buffer is empty.");
@@ -75,6 +82,14 @@ const MINOR_PROFILE = [
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+/**
+ * Creates a bounded slice descriptor from an AudioBuffer for region-specific DSP analysis.
+ *
+ * @param {AudioBuffer} audioBuffer - Source decoded audio buffer.
+ * @param {number} startSeconds - Region start offset in seconds.
+ * @param {number} endSeconds - Region end offset in seconds.
+ * @returns {{ channels: Float32Array[], sampleRate: number, startSample: number, length: number, duration: number } | null}
+ */
 const createRegionSource = (audioBuffer, startSeconds, endSeconds) => {
 	if (!audioBuffer || !audioBuffer.sampleRate || !audioBuffer.length)
 		return null;
@@ -110,6 +125,13 @@ const createRegionSource = (audioBuffer, startSeconds, endSeconds) => {
 	};
 };
 
+/**
+ * Returns a mono downmixed sample from the region at the specified sample offset.
+ *
+ * @param {object} source - Region source descriptor.
+ * @param {number} regionIndex - Region-relative sample index.
+ * @returns {number} Downmixed mono sample value.
+ */
 const readMonoSample = (source, regionIndex) => {
 	const sourceIndex = source.startSample + regionIndex;
 	let sample = 0;
@@ -118,6 +140,12 @@ const readMonoSample = (source, regionIndex) => {
 	return sample / source.channels.length;
 };
 
+/**
+ * Quick RMS estimate using strided sampling across the region.
+ *
+ * @param {object} source - Region source descriptor.
+ * @returns {number} Estimated RMS amplitude.
+ */
 const regionRms = (source) => {
 	const stride = Math.max(1, Math.floor(source.length / 100000));
 	let energy = 0;
@@ -132,6 +160,13 @@ const regionRms = (source) => {
 	return count ? Math.sqrt(energy / count) : 0;
 };
 
+/**
+ * Estimates region tempo (BPM) using envelope tracking, onset detection,
+ * normalized cross-correlation, and octave error correction.
+ *
+ * @param {object} source - Region source descriptor.
+ * @returns {number|null} Estimated tempo in BPM, or null if uncertain/unvoiced.
+ */
 export const estimateBpm = (source) => {
 	if (source.duration < 2) return null;
 
@@ -233,80 +268,21 @@ export const estimateBpm = (source) => {
 	return Math.round((60 * envelopeRate) / bestLag);
 };
 
-const estimateFramePitch = (frame, sampleRate) => {
-	let mean = 0;
-	for (const sample of frame) mean += sample;
-	mean /= frame.length;
-
-	let energy = 0;
-	for (let index = 0; index < frame.length; index += 1) {
-		frame[index] -= mean;
-		energy += frame[index] * frame[index];
-	}
-	if (Math.sqrt(energy / frame.length) < 0.001) return null;
-
-	const minimumLag = Math.max(1, Math.floor(sampleRate / 2000));
-	const maximumLag = Math.min(
-		Math.floor(sampleRate / 55),
-		Math.floor(frame.length / 2)
-	);
-	const correlations = new Float32Array(maximumLag + 1);
-	let bestLag = 0;
-	let bestCorrelation = 0;
-
-	for (let lag = minimumLag; lag <= maximumLag; lag += 1) {
-		let correlation = 0;
-		let firstEnergy = 0;
-		let secondEnergy = 0;
-
-		for (let index = 0; index < frame.length - lag; index += 1) {
-			const first = frame[index];
-			const second = frame[index + lag];
-			correlation += first * second;
-			firstEnergy += first * first;
-			secondEnergy += second * second;
-		}
-
-		const denominator = Math.sqrt(firstEnergy * secondEnergy);
-		correlations[lag] = denominator ? correlation / denominator : 0;
-		if (correlations[lag] > bestCorrelation) {
-			bestCorrelation = correlations[lag];
-			bestLag = lag;
-		}
-	}
-
-	if (!bestLag || bestCorrelation < 0.55) return null;
-
-	const acceptableCorrelation = Math.max(0.55, bestCorrelation * 0.9);
-	for (let lag = minimumLag + 1; lag < bestLag; lag += 1) {
-		if (
-			correlations[lag] >= acceptableCorrelation &&
-			correlations[lag] > correlations[lag - 1] &&
-			correlations[lag] >= correlations[lag + 1]
-		) {
-			bestLag = lag;
-			break;
-		}
-	}
-
-	const before = correlations[bestLag - 1] || correlations[bestLag];
-	const centre = correlations[bestLag];
-	const after = correlations[bestLag + 1] || correlations[bestLag];
-	const curve = before - 2 * centre + after;
-	const offset = curve ? (0.5 * (before - after)) / curve : 0;
-
-	return sampleRate / (bestLag + clamp(offset, -1, 1));
-};
-
 /**
  * Calculates fundamental frequency using the YIN pitch detection algorithm.
- * Significantly reduces octave errors over standard autocorrelation.
+ * Applies difference calculation, cumulative mean normalization, absolute thresholding,
+ * and parabolic interpolation for sub-sample accuracy.
+ *
+ * @param {Float32Array} frame - Mono audio sample window.
+ * @param {number} sampleRate - Effective sample rate of the frame.
+ * @param {number} [threshold=0.15] - Minimum dip threshold for periodicity detection.
+ * @returns {number|null} Estimated fundamental frequency in Hz, or null if unvoiced/noise.
  */
 const estimateFramePitchYin = (frame, sampleRate, threshold = 0.15) => {
 	const halfLen = Math.floor(frame.length / 2);
 	const diff = new Float32Array(halfLen);
 
-	// Step 1: Difference Function d(tau)
+	// Step 1: Difference function d(tau)
 	for (let tau = 0; tau < halfLen; tau++) {
 		let sum = 0;
 		for (let i = 0; i < halfLen; i++) {
@@ -316,7 +292,7 @@ const estimateFramePitchYin = (frame, sampleRate, threshold = 0.15) => {
 		diff[tau] = sum;
 	}
 
-	// Step 2: Cumulative Mean Normalized Difference Function d'(tau)
+	// Step 2: Cumulative mean normalized difference function d'(tau)
 	const normDiff = new Float32Array(halfLen);
 	normDiff[0] = 1;
 	let runningSum = 0;
@@ -326,7 +302,7 @@ const estimateFramePitchYin = (frame, sampleRate, threshold = 0.15) => {
 		normDiff[tau] = runningSum === 0 ? 1 : (diff[tau] * tau) / runningSum;
 	}
 
-	// Step 3: Absolute Thresholding (Find first dip below threshold)
+	// Step 3: Absolute thresholding (first dip below threshold)
 	const minLag = Math.max(1, Math.floor(sampleRate / 2000)); // ~2000 Hz upper limit
 	const maxLag = Math.min(Math.floor(sampleRate / 50), halfLen - 2); // ~50 Hz lower limit
 	let bestLag = 0;
@@ -353,7 +329,7 @@ const estimateFramePitchYin = (frame, sampleRate, threshold = 0.15) => {
 		if (minVal > 0.45) return null; // Unvoiced / noise frame
 	}
 
-	// Step 4: Parabolic Interpolation for sub-sample accuracy
+	// Step 4: Parabolic interpolation for sub-sample accuracy
 	const s0 = normDiff[bestLag - 1];
 	const s1 = normDiff[bestLag];
 	const s2 = normDiff[bestLag + 1];
@@ -364,6 +340,13 @@ const estimateFramePitchYin = (frame, sampleRate, threshold = 0.15) => {
 	return sampleRate / refinedLag;
 };
 
+/**
+ * Estimates the dominant pitch and musical note of a region by sampling
+ * frames across the region using YIN pitch detection and finding the modal note.
+ *
+ * @param {object} source - Region source descriptor.
+ * @returns {string|null} Musical note and frequency (e.g. "A4 (440 Hz)"), or null if unpitched.
+ */
 const estimatePitch = (source) => {
 	const decimation = Math.max(1, Math.ceil(source.sampleRate / 12000));
 	const analysisSampleRate = source.sampleRate / decimation;
@@ -422,6 +405,15 @@ const estimatePitch = (source) => {
 	return `${note}${octave} (${Math.round(frequency)} Hz)`;
 };
 
+/**
+ * Computes Pearson correlation between a 12-dimensional chroma vector
+ * and a key profile rotated to a candidate root note.
+ *
+ * @param {number[]} chroma - 12-bin chroma energy distribution.
+ * @param {number[]} profile - 12-bin key profile weights.
+ * @param {number} root - Semitone pitch offset (0-11).
+ * @returns {number} Normalized correlation score.
+ */
 const correlationWithProfile = (chroma, profile, root) => {
 	const chromaMean =
 		chroma.reduce((sum, value) => sum + value, 0) / chroma.length;
@@ -444,6 +436,13 @@ const correlationWithProfile = (chroma, profile, root) => {
 	return denominator ? numerator / denominator : -Infinity;
 };
 
+/**
+ * Detects the musical key and mode (major/minor) using Meyda chroma analysis
+ * and Krumhansl-Schmuckler key profile correlation.
+ *
+ * @param {object} source - Region source descriptor.
+ * @returns {string|null} Detected key (e.g. "C major", "A minor"), or null if undetectable.
+ */
 const estimateKey = (source) => {
 	const maximumFrameSize = 4096;
 	const availablePower = Math.floor(Math.log2(source.length));
@@ -503,6 +502,15 @@ const estimateKey = (source) => {
 		: null;
 };
 
+/**
+ * Analyzes an audio region to calculate duration, tempo (BPM), dominant pitch,
+ * and musical key.
+ *
+ * @param {AudioBuffer} audioBuffer - Full decoded track AudioBuffer.
+ * @param {number} startSeconds - Selection start in seconds.
+ * @param {number} endSeconds - Selection end in seconds.
+ * @returns {{ duration: number, bpm: number|null, pitch: string|null, key: string|null }} Region metrics.
+ */
 export const analyseRegion = (audioBuffer, startSeconds, endSeconds) => {
 	const source = createRegionSource(audioBuffer, startSeconds, endSeconds);
 	const duration = Math.max(0, Math.abs(endSeconds - startSeconds));

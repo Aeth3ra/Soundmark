@@ -9,9 +9,12 @@ import {
 const DEFAULT_TIMESTAMP_COLOUR = "#ff6b4a";
 
 /**
- * Renders the annotations provided using the regions plugin
- * @param {*} regionsPlugin regionsplugin that has been attached to wavesurfer instance
- * @param {Array<{_id, start, end, tags, comment}>} annotations list of annotations
+ * Synchronizes annotations with WaveSurfer RegionsPlugin, managing region lifecycles
+ * and creating portal DOM mount nodes for React overlay rendering.
+ *
+ * @param {object|null} regionsPlugin - WaveSurfer RegionsPlugin instance.
+ * @param {Array<{ _id: string, start: number, end: number|null, tags: string[], comment: string, colour?: string }>} annotations - Annotations list.
+ * @returns {Array<{ id: string, slotElement: HTMLElement, annotation: object, isTimestamp: boolean, region: object }>} Active marker slots.
  */
 export const useAnnotationRender = (regionsPlugin, annotations) => {
 	// A map to track which annotation data is link to which annotation region
@@ -99,8 +102,14 @@ const regionColour = (annotation, isTimestamp) =>
 		? annotation.colour || DEFAULT_TIMESTAMP_COLOUR
 		: applyOpacity(annotation.colour, 0.2);
 
-// Creates an empty box on the waveform - no content yet.
-// React fills it in via AnnotationMarkersLayer.
+/**
+ * Creates a WaveSurfer region element and mounts an isolated child `<div>`
+ * for React to safely render markers into via createPortal.
+ *
+ * @param {object} regionsPlugin - WaveSurfer RegionsPlugin.
+ * @param {object} annotation - Source annotation.
+ * @returns {object} Created WaveSurfer region with custom `__mount` property.
+ */
 const createRegion = (regionsPlugin, annotation) => {
 	const isTimestamp = annotation.end == null;
 

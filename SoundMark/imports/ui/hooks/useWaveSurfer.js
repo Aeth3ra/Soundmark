@@ -15,7 +15,14 @@ const initialPlayer = () => ({
 	audioVersion: 0
 });
 
-// Also stop waiting if a media error occurs or this player is disposed
+/**
+ * Loads an audio Blob into WaveSurfer, racing against playback errors and abort cancellation.
+ *
+ * @param {object} wavesurfer - WaveSurfer instance.
+ * @param {Blob} blob - Audio preview Blob.
+ * @param {AbortSignal} signal - Cancellation signal.
+ * @returns {Promise<void>}
+ */
 async function loadPreview(wavesurfer, blob, signal) {
 	let unsubscribe;
 	let onAbort;
@@ -35,6 +42,16 @@ async function loadPreview(wavesurfer, blob, signal) {
 	}
 }
 
+/**
+ * Manages the WaveSurfer lifecycle, decoding, effect preview rendering,
+ * and playback state synchronization.
+ *
+ * @param {string|null} url - Audio source URL.
+ * @param {Array<object>} [effects=[]] - DSP effects list.
+ * @param {boolean} [effectsReady=true] - Whether effect subscriptions have loaded.
+ * @param {object} [services] - Audio loading and preview rendering services.
+ * @returns {object} Playback state and control methods.
+ */
 export const useWavesurfer = (
 	url,
 	effects = [],

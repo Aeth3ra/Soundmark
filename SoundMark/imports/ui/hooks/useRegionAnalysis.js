@@ -9,6 +9,15 @@ const emptyAnalysis = {
   isAnalysing: false
 };
 
+/**
+ * Asynchronously extracts musical features (BPM, dominant pitch, musical key)
+ * for the currently active user selection.
+ *
+ * @param {object|null} wavesurferInstance - WaveSurfer instance holding decoded audio data.
+ * @param {{ id: string, start: number, end: number }|null} activeRegion - Selected region boundaries.
+ * @param {number} [audioVersion=0] - Monotonic audio version counter to invalidate on re-render.
+ * @returns {{ duration: number|null, bpm: number|null, pitch: string|null, key: string|null, isAnalysing: boolean }}
+ */
 export const useRegionAnalysis = (wavesurferInstance, activeRegion, audioVersion = 0) => {
   const [analysis, setAnalysis] = useState(emptyAnalysis);
   const requestId = useRef(0);

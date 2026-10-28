@@ -45,7 +45,10 @@ const writeString = (view, offset, string) => {
 };
 
 /**
- * Encodes an AudioBuffer as an uncompressed 16-bit PCM WAV Blob
+ * Encodes an AudioBuffer as an uncompressed 16-bit PCM WAV Blob with standard RIFF headers.
+ *
+ * @param {AudioBuffer} audioBuffer - Buffer to encode.
+ * @returns {Blob} WAV-encoded audio file Blob.
  */
 export function encodeWavBlob(audioBuffer) {
     const numChannels = audioBuffer.numberOfChannels;
@@ -58,11 +61,12 @@ export function encodeWavBlob(audioBuffer) {
     const buffer = new ArrayBuffer(44 + dataSize);
     const view = new DataView(buffer);
 
+    // 44-byte canonical WAV header
     writeString(view, 0, "RIFF");
     view.setUint32(4, 36 + dataSize, true);
     writeString(view, 8, "WAVE");
     writeString(view, 12, "fmt ");
-    view.setUint32(16, 16, true); // fmt chunk size (PCM)
+    view.setUint32(16, 16, true); // fmt chunk size (16 for PCM)
     view.setUint16(20, 1, true); // audio format: 1 = PCM
     view.setUint16(22, numChannels, true);
     view.setUint32(24, sampleRate, true);
@@ -77,6 +81,7 @@ export function encodeWavBlob(audioBuffer) {
         channelData.push(audioBuffer.getChannelData(channel));
     }
 
+    // Interleave channels and convert 32-bit float samples to 16-bit signed PCM
     let offset = 44;
     for (let frame = 0; frame < numFrames; frame++) {
         for (let channel = 0; channel < numChannels; channel++) {
@@ -97,9 +102,10 @@ export function encodeWavBlob(audioBuffer) {
 }
 
 /**
- * Creates a clone of an audio buffer
- * @param {*} source
- * @returns
+ * Creates an exact, independent copy of an AudioBuffer.
+ *
+ * @param {AudioBuffer} source - AudioBuffer to clone.
+ * @returns {AudioBuffer} Cloned AudioBuffer.
  */
 export function cloneAudioBuffer(source) {
     const clone = new AudioBuffer({
@@ -114,10 +120,11 @@ export function cloneAudioBuffer(source) {
 }
 
 /**
- * Splices one audio buffer onto another at the provided seconds
- * @param {*} target
- * @param {*} source
- * @param {*} startSeconds
+ * Overwrites a section of a target AudioBuffer with data from a source AudioBuffer starting at `startSeconds`.
+ *
+ * @param {AudioBuffer} target - Destination AudioBuffer (modified in place).
+ * @param {AudioBuffer} source - Replacement AudioBuffer.
+ * @param {number} startSeconds - Insertion offset in seconds.
  */
 export function spliceAudioBuffer(target, source, startSeconds) {
     const startSample = Math.floor(startSeconds * target.sampleRate);
@@ -128,6 +135,12 @@ export function spliceAudioBuffer(target, source, startSeconds) {
     }
 }
 
+/**
+ * Formats seconds into a filesystem-friendly duration label (e.g. "1m23s" or "45s").
+ *
+ * @param {number} seconds - Duration in seconds.
+ * @returns {string} Formatted label string.
+ */
 export function secondsToFileLabel(seconds) {
     const total = Math.max(0, Math.round(seconds));
     const minutes = Math.floor(total / 60);

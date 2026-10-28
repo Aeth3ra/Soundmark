@@ -4,7 +4,18 @@ import { EffectsCollection } from "./effectsCollection";
 import { AudioCollection } from "../audio/audioCollection";
 import { isHost } from "../sessions/sessionMethods";
 
-// Shared by create and update so both accept the same effect settings
+/**
+ * Validates region boundaries, ordering, and parameter ranges for a DSP effect.
+ *
+ * @param {object} effect
+ * @param {string} effect.type - Effect type.
+ * @param {number} effect.start - Region start in seconds.
+ * @param {number} effect.end - Region end in seconds.
+ * @param {object} effect.params - Effect parameter map.
+ * @param {number} effect.order - Execution order index.
+ * @param {number} [durationSeconds] - Optional total audio duration cap.
+ * @throws {Meteor.Error} If boundaries, order, or parameters are out of bounds.
+ */
 function validateEffect({ type, start, end, params, order }, durationSeconds) {
 	if (
 		!Number.isFinite(start) ||
@@ -98,7 +109,18 @@ function validateEffect({ type, start, end, params, order }, durationSeconds) {
 
 Meteor.methods({
 	/**
-	 * Method to create an effect for an audio file
+	 * Creates an audio effect region on an audio track.
+	 *
+	 * @param {object} params
+	 * @param {string} params.fileId - Target audio file ID.
+	 * @param {"normalize"|"amplify"|"pitchShift"|"filter"} params.type - Effect type.
+	 * @param {number} params.start - Region start in seconds.
+	 * @param {number} params.end - Region end in seconds.
+	 * @param {object} params.params - Validated parameter object for the effect type.
+	 * @param {boolean} [params.enabled=true] - Active flag.
+	 * @param {number} [params.order=0] - Render pipeline order index.
+	 * @returns {Promise<string>} Mongo ID of the inserted effect document.
+	 * @throws {Meteor.Error} "not-authorized" if unauthenticated, "audio-not-found" if missing audio.
 	 */
 	async "effects.create"({
 		fileId,
@@ -150,7 +172,13 @@ Meteor.methods({
 	},
 
 	/**
-	 * Method to update an effect's editable settings
+	 * Updates an effect's region boundaries, parameters, or enabled state.
+	 * Only allowed by the original creator or the session host.
+	 *
+	 * @param {string} effectId - Target effect ID.
+	 * @param {object} updates - Fields to update.
+	 * @returns {Promise<number>} Number of modified documents.
+	 * @throws {Meteor.Error} "not-authorized" if caller is neither creator nor host.
 	 */
 	async "effects.update"(effectId, updates) {
 		if (!this.userId) {
@@ -211,7 +239,11 @@ Meteor.methods({
 	},
 
 	/**
-	 * Method to delete an effect
+	 * Deletes an effect document. Only permitted by the creator or session host.
+	 *
+	 * @param {string} effectId - Target effect ID.
+	 * @returns {Promise<number>} Number of removed documents.
+	 * @throws {Meteor.Error} "not-authorized" if caller is neither creator nor host.
 	 */
 	async "effects.delete"(effectId) {
 		if (!this.userId) {

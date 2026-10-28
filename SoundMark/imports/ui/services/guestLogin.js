@@ -1,6 +1,10 @@
 import { Accounts } from "meteor/accounts-base";
 
-// Client-side trigger for the "guest" login handler registered on the server.
+/**
+ * Authenticates the client anonymously using the custom "guest" login handler.
+ *
+ * @returns {Promise<void>} Resolves when the session token is received and user state is initialized.
+ */
 export function loginAsGuest() {
   return new Promise((resolve, reject) => {
     Accounts.callLoginMethod({

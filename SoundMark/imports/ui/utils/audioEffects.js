@@ -6,7 +6,13 @@ import {
 	cloneAudioBuffer
 } from "./audioExport";
 
-// Render one region through a GainNode, preserving its channel layout
+/**
+ * Renders an AudioBuffer through a linear GainNode using OfflineAudioContext.
+ *
+ * @param {AudioBuffer} audioBuffer - Buffer to process.
+ * @param {number} gain - Linear amplitude multiplier.
+ * @returns {Promise<AudioBuffer>} Rendered audio buffer.
+ */
 async function renderGain(audioBuffer, gain) {
 	const OfflineContext =
 		globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
@@ -41,10 +47,11 @@ async function renderGain(audioBuffer, gain) {
 }
 
 /**
- * Pitch-shifts an AudioBuffer by the requested number of semitones.
+ * Pitch-shifts an AudioBuffer by the requested number of semitones using Tone.js.
  *
- * The rendered buffer has the same duration, channel count and sample rate
- * as the input. The input buffer is never modified.
+ * @param {AudioBuffer} audioBuffer - Source audio buffer (never mutated).
+ * @param {number} semitones - Shift amount in semitones (between -24 and 24).
+ * @returns {Promise<AudioBuffer>} Rendered pitch-shifted audio buffer.
  */
 async function renderPitchShift(audioBuffer, semitones) {
 	if (!Number.isFinite(semitones) || semitones < -24 || semitones > 24) {
@@ -74,10 +81,12 @@ async function renderPitchShift(audioBuffer, semitones) {
 }
 
 /**
- * Applies a low-pass or high-pass filter to an AudioBuffer.
+ * Applies a biquad low-pass or high-pass filter to an AudioBuffer.
  *
- * The rendered buffer has the same duration, channel count and sample rate
- * as the input. The input buffer is never modified.
+ * @param {AudioBuffer} audioBuffer - Source audio buffer (never mutated).
+ * @param {"lowpass"|"highpass"} filterType - Type of filter to apply.
+ * @param {number} frequency - Cutoff frequency in Hz.
+ * @returns {Promise<AudioBuffer>} Rendered filtered audio buffer.
  */
 async function renderFilter(audioBuffer, filterType, frequency) {
 	if (filterType !== "lowpass" && filterType !== "highpass") {
@@ -135,7 +144,14 @@ async function renderFilter(audioBuffer, filterType, frequency) {
 	}
 }
 
-/** Apply saved effects to the full track. The source buffer is never mutated */
+/**
+ * Applies an ordered chain of active effects across regions of an audio track.
+ * The source AudioBuffer is never mutated.
+ *
+ * @param {AudioBuffer} audioBuffer - Base audio track to process.
+ * @param {Array<object>} [effects=[]] - List of effect documents to apply.
+ * @returns {Promise<AudioBuffer>} Cloned and processed AudioBuffer.
+ */
 export async function applyEffectsChain(audioBuffer, effects = []) {
 	validateEffectsList(effects);
 
@@ -273,15 +289,21 @@ const EFFECT_HANDLERS = {
 	}
 };
 
-//Helpers
-
-// Converts a dB value to a linear amplitude multiplier (0 dB -> 1.0).
+/**
+ * Converts a decibel value into a linear amplitude multiplier (e.g. 0 dB -> 1.0).
+ *
+ * @param {number} db - Decibel value.
+ * @returns {number} Linear amplitude factor.
+ */
 function dbToLinear(db) {
 	return Math.pow(10, db / 20);
 }
 
-// Clamps every sample in every channel to [-1, 1] in place, so a boost that
-// would otherwise clip is limited instead of rejected outright.
+/**
+ * Hard-clips every sample across all channels to [-1, 1] in place to prevent digital wrap-around.
+ *
+ * @param {AudioBuffer} buffer - Buffer to clamp.
+ */
 function hardLimitInPlace(buffer) {
 	for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
 		const data = buffer.getChannelData(channel);
@@ -295,6 +317,11 @@ function hardLimitInPlace(buffer) {
 	}
 }
 
+/**
+ * Validates the structure and type of items in an effects array.
+ *
+ * @param {Array<object>} effects - Effects array to validate.
+ */
 function validateEffectsList(effects) {
 	if (!Array.isArray(effects)) {
 		throw new Error("Effects must be an array.");
@@ -311,6 +338,13 @@ function validateEffectsList(effects) {
 	}
 }
 
+/**
+ * Filters enabled effects and sorts them into deterministic processing order
+ * (by order index, then creation time, then ID).
+ *
+ * @param {Array<object>} effects - Input list of effects.
+ * @returns {Array<object>} Filtered and sorted effects.
+ */
 function getOrderedActiveEffects(effects) {
 	return effects
 		.filter((effect) => effect.enabled)
@@ -325,6 +359,13 @@ function getOrderedActiveEffects(effects) {
 		});
 }
 
+/**
+ * Validates that an effect region start and end are finite, non-negative, and fit within audio duration.
+ *
+ * @param {number} start - Region start in seconds.
+ * @param {number} end - Region end in seconds.
+ * @param {number} maxDuration - Audio duration limit in seconds.
+ */
 function validateRegionBounds(start, end, maxDuration) {
 	if (
 		!Number.isFinite(start) ||

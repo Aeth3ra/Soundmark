@@ -13,15 +13,17 @@ import {
 } from "./r2";
 
 /**
- * Deletes the R2 object, the Mongo record, and everything that belongs
- * to the file (annotations and effects).
+ * Deletes an audio object from R2 storage and cascades deletion to all
+ * related Mongo records (annotations, effects, audio metadata).
+ *
+ * @param {string} fileId - ID of the audio document to delete.
+ * @returns {Promise<void>}
  */
 export async function deleteAudioFile(fileId) {
 	const file = await AudioCollection.findOneAsync(fileId);
-	if (!file) return; // already gone
+	if (!file) return;
 
-	// R2 first: if this throws, nothing has been removed from Mongo yet,
-	// so the file and its data stay consistent and the delete can be retried.
+	// Remove cloud object first; if this fails, database records remain intact for retry
 	await r2Client.send(
 		new DeleteObjectCommand({ Bucket: r2Bucket, Key: file.key })
 	);
@@ -35,25 +37,27 @@ export async function deleteAudioFile(fileId) {
 
 Meteor.methods({
 	/**
-	 * Method to get URL for audio to be uploaded
+	 * Generates a presigned PUT URL for direct client upload to Cloudflare R2
+	 * and creates a pending audio document.
+	 *
+	 * @param {string} filename - Original name of the uploaded file.
+	 * @param {string} contentType - Audio MIME type.
+	 * @returns {Promise<{ uploadUrl: string, fileId: string }>}
 	 */
 	async "audio.getUploadUrl"(filename, contentType) {
-		// the path for the object to be stored in
 		const key = `audio/${Random.id()}-${filename}`;
 		console.log("Upload URL requested:", filename, contentType);
-		//command to upload the file
+
 		const command = new PutObjectCommand({
 			Bucket: r2Bucket,
 			Key: key,
 			ContentType: contentType
 		});
 
-		// get the upload URL
 		const uploadUrl = await r2Helpers.getSignedUrl(r2Client, command, {
 			expiresIn: 300
 		});
 
-		// Insert into Mongo
 		const fileId = await AudioCollection.insertAsync({
 			key,
 			fileName: filename,
@@ -66,7 +70,11 @@ Meteor.methods({
 	},
 
 	/**
-	 * Method to get URL for audio to be downloaded
+	 * Generates a signed GET URL for streaming/downloading audio from R2.
+	 *
+	 * @param {string} fileId - ID of the audio document.
+	 * @returns {Promise<string>} Signed download URL valid for 5 minutes.
+	 * @throws {Meteor.Error} "file-not-found" if the document does not exist.
 	 */
 	async "audio.getDownloadUrl"(fileId) {
 		const file = await AudioCollection.findOneAsync(fileId);
@@ -88,7 +96,11 @@ Meteor.methods({
 	},
 
 	/**
-	 * Method to get the original audio file information for export
+	 * Returns export metadata and a signed download URL for an audio file.
+	 *
+	 * @param {string} fileId - ID of the audio document.
+	 * @returns {Promise<{ url: string, fileName: string }>}
+	 * @throws {Meteor.Error} "not-found" if the file record does not exist.
 	 */
 	async "audio.getExportInfo"(fileId) {
 		const file = await AudioCollection.findOneAsync(fileId);
@@ -113,8 +125,10 @@ Meteor.methods({
 	},
 
 	/**
-	 * Deletes the R2 object and Mongo record together. Called when a user
-	 * leaves the player page without exporting/saving anything.
+	 * Removes an audio object from R2 and its document from Mongo.
+	 *
+	 * @param {string} fileId - ID of the audio document to delete.
+	 * @returns {Promise<void>}
 	 */
 	async "audio.deleteFile"(fileId) {
 		const file = await AudioCollection.findOneAsync(fileId);

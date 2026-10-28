@@ -3,7 +3,15 @@ import { check, Match } from "meteor/check";
 import { AnnotationsCollection } from "./annotationsCollection";
 import { AudioCollection } from "../audio/audioCollection";
 
-// Validation for creating and updating annotations
+/**
+ * Validates start and end timestamps for an annotation against audio boundaries.
+ *
+ * @param {object} bounds
+ * @param {number} bounds.start - Start time in seconds.
+ * @param {number|null} bounds.end - End time in seconds (or null for point markers).
+ * @param {number} [durationSeconds] - Optional total audio duration cap.
+ * @throws {Meteor.Error} "invalid-time" if timing is negative, reversed, or out of bounds.
+ */
 function validateAnnotation({ start, end }, durationSeconds) {
 	if (!Number.isFinite(start) || start < 0) {
 		throw new Meteor.Error(
@@ -40,7 +48,19 @@ function validateAnnotation({ start, end }, durationSeconds) {
 
 Meteor.methods({
 	/**
-	 * Method to create an annotation for an audio file
+	 * Creates a new annotation or timestamp marker on an audio file.
+	 * Sets createdBy strictly to the authenticated user's ID.
+	 *
+	 * @param {object} params
+	 * @param {string} params.fileId - Target audio file ID.
+	 * @param {string} [params.title=""] - Annotation title.
+	 * @param {string} [params.colour=""] - Hex color code.
+	 * @param {number} params.start - Start time in seconds.
+	 * @param {number|null} [params.end=null] - End time in seconds (null for timestamps).
+	 * @param {string[]} [params.tags=[]] - Tag list.
+	 * @param {string} [params.comment=""] - Detailed note text.
+	 * @returns {Promise<string>} Mongo ID of the inserted annotation document.
+	 * @throws {Meteor.Error} "not-authorized" if unauthenticated, "audio-not-found" if file does not exist.
 	 */
 	async "annotations.create"({
 		fileId,
@@ -65,7 +85,6 @@ Meteor.methods({
 
 		const audioFile = await AudioCollection.findOneAsync(fileId);
 
-		// Check file exists
 		if (!audioFile) {
 			throw new Meteor.Error(
 				"audio-not-found",
@@ -75,10 +94,6 @@ Meteor.methods({
 
 		validateAnnotation({ start, end }, audioFile.durationSeconds);
 
-		// Insert into Mongo. createdBy is always this.userId (the calling user's
-		// account, guest or otherwise) — never trust a client-supplied id.
-		// Display name is looked up from Meteor.users.profile.name at read time
-		// rather than duplicated here.
 		return await AnnotationsCollection.insertAsync({
 			fileId,
 			title: title.trim(),
@@ -93,6 +108,14 @@ Meteor.methods({
 		});
 	},
 
+	/**
+	 * Updates content, styling, or timing for an existing annotation.
+	 *
+	 * @param {string} annotationId - Target annotation ID.
+	 * @param {object} updates - Properties to update.
+	 * @returns {Promise<number>} Number of modified documents.
+	 * @throws {Meteor.Error} "not-authorized" if unauthenticated, "annotation-not-found" if missing.
+	 */
 	async "annotations.update"(annotationId, updates) {
 		if (!this.userId) {
 			throw new Meteor.Error("not-authorized", "Must be logged in.");
@@ -133,7 +156,10 @@ Meteor.methods({
 	},
 
 	/**
-	 * Method to delete an annotation
+	 * Removes an annotation document by ID.
+	 *
+	 * @param {string} annotationId - ID of the annotation to remove.
+	 * @returns {Promise<void>}
 	 */
 	async "annotations.delete"(annotationId) {
 		check(annotationId, String);

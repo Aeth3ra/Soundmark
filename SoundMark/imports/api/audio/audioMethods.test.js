@@ -2,6 +2,8 @@ import { Meteor } from "meteor/meteor";
 import { assert } from "chai";
 import sinon from "sinon";
 import { AudioCollection } from "./audioCollection";
+import { AnnotationsCollection } from "../annotations/annotationsCollection";
+import { EffectsCollection } from "../effects/effectsCollection";
 import * as R2 from "./r2";
 import "./audioMethods"; // side-effect import: registers the methods
 import { deleteAudioFile } from "./audioMethods";

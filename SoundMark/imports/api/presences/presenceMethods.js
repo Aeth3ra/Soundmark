@@ -20,8 +20,18 @@ const STALE_MS = 5 * 60 * 1000; // 5 minutes
 const SWEEP_INTERVAL_MS = 15000;
 Meteor.methods({
 	/**
-	 * Upserts the calling guest's live position for a given file/workspace.
-	 * userId/name come from the authenticated session
+	 * Updates the authenticated user's presence state (playhead position, playback status,
+	 * rate, and follow target) for a specific file workspace. Lazily creates a session if
+	 * no other presence documents exist.
+	 *
+	 * @param {object} params
+	 * @param {string} params.fileId - Target audio workspace ID.
+	 * @param {number} params.position - Current playhead position in seconds.
+	 * @param {boolean} [params.isPlaying=false] - Whether audio is actively playing.
+	 * @param {string|null} [params.followingUserId=null] - ID of user being followed, or null.
+	 * @param {number} [params.playbackRate=1] - Playback speed multiplier.
+	 * @returns {Promise<void>}
+	 * @throws {Meteor.Error} "not-authorized" if unauthenticated.
 	 */
 	async "presence.update"({
 		fileId,
@@ -83,8 +93,12 @@ Meteor.methods({
 	},
 
 	/**
-	 * Removes the calling guest's doc for a file. Best-effort - call on
-	 * unmount/navigation, but don't rely on it alone (see STALE_MS cleanup).
+	 * Explicitly leaves a workspace. If the leaving user is the session host,
+	 * terminates the collaborative session completely.
+	 *
+	 * @param {object} payload
+	 * @param {string} payload.fileId - Target workspace file ID.
+	 * @returns {Promise<void>}
 	 */
 	async "presence.leave"(payload) {
 		if (!this.userId) return;
@@ -105,8 +119,10 @@ Meteor.methods({
 });
 
 /**
- * Best-effort cleanup for guests (including hosts) who disconnected
- * without a clean "presence.leave" call.
+ * Sweeps orphaned presence documents where connections terminated uncleanly.
+ * If the host went stale, tears down the entire session and cleans up R2 storage.
+ *
+ * @returns {Promise<void>}
  */
 export async function cleanupStalePresence() {
 	const cutoff = new Date(Date.now() - STALE_MS);

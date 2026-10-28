@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 
+/**
+ * Reactively tracks the DOM scroll width of the WaveSurfer wrapper element across zoom and redraw events.
+ *
+ * @param {object|null} wavesurferInstance - WaveSurfer instance.
+ * @returns {number} Current waveform scroll width in pixels.
+ */
 export function useWaveformWidth(wavesurferInstance) {
 	const [waveformWidth, setWaveformWidth] = useState(
 		() => wavesurferInstance?.getWrapper()?.scrollWidth ?? 0

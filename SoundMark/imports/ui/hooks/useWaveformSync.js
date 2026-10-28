@@ -3,6 +3,25 @@ import { useEffect, useState, useCallback, useRef } from "react";
 const DRIFT_SEEK_THRESHOLD_SEC = 0.75;
 const CHECK_INTERVAL_MS = 300;
 
+/**
+ * Synchronizes local playback and playhead position with a designated collaborator,
+ * interpolating target position over time and correcting drift above a tolerance threshold.
+ *
+ * @param {object} params
+ * @param {number} params.duration - Total track duration in seconds.
+ * @param {Array<object>} [params.otherUsers=[]] - Presence records of other active collaborators.
+ * @param {string|null} params.followingUserId - ID of collaborator currently being followed.
+ * @param {Function} params.setFollowingUserId - Setter for followingUserId.
+ * @param {string} params.currentUserId - Authenticated user's ID.
+ * @param {number} params.currentTime - Local current playback time in seconds.
+ * @param {Function} params.seekTo - Normalized progress seek function (0 to 1).
+ * @param {Function} params.play - Playback start function.
+ * @param {Function} params.pause - Playback pause function.
+ * @param {boolean} params.isPlaying - Local playing status.
+ * @param {number} params.playbackRate - Local playback speed.
+ * @param {Function} params.setPlaybackRate - Speed setter function.
+ * @returns {object} Sync state and follow management handlers.
+ */
 export const useWaveformSync = ({
   duration,
   otherUsers = [],
@@ -19,7 +38,6 @@ export const useWaveformSync = ({
 }) => {
   const [syncError, setSyncError] = useState(null);
 
-  // Active user target object
   const targetUser = otherUsers.find((u) => u.userId === followingUserId);
 
   // Refs so the interval always reads fresh values without restarting
@@ -161,6 +179,13 @@ export const useWaveformSync = ({
   };
 };
 
+/**
+ * Extrapolates a followed user's real-time playhead position using their last reported
+ * position, timestamp, and playback speed.
+ *
+ * @param {object|null} target - Followed user's presence document.
+ * @returns {number|null} Estimated playhead time in seconds, or null if target is absent.
+ */
 function estimateTargetPosition(target) {
   if (!target) return null;
   const rate = target.isPlaying ? (target.playbackRate ?? 1) : 0;

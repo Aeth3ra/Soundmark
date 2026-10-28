@@ -15,6 +15,15 @@ const unavailableAnalysis = (annotation) => ({
   isAnalysing: false
 });
 
+/**
+ * Progressively analyses audio regions corresponding to annotations in the background,
+ * caching results by annotation geometry to avoid redundant DSP computation.
+ *
+ * @param {object|null} wavesurferInstance - WaveSurfer instance holding decoded audio.
+ * @param {Array<object>} annotations - List of annotation documents.
+ * @param {boolean} enabled - Whether automatic analysis is enabled.
+ * @returns {Record<string, { duration: number|null, bpm: number|null, pitch: string|null, key: string|null, isAnalysing: boolean }>}
+ */
 export const useAnnotationAnalysis = (
   wavesurferInstance,
   annotations,

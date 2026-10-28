@@ -67,11 +67,11 @@ function compareEffects(a, b) {
 }
 
 /**
- * Strips an annotation down to the fields that make sense to carry across
- * to a different session/user: original timestamps + the user-authored
- * content. Deliberately drops _id, fileId and createdBy - those are only
- * meaningful in the database they came from, and get regenerated on
- * import (see projectPackageService.importProjectPackage).
+ * Strips database-specific identifiers (_id, fileId, createdBy) from annotations,
+ * preserving timing, styling, and content for portable bundle export.
+ *
+ * @param {Array<object>} annotations - Annotations from the database.
+ * @returns {Array<object>} Sanitized, portable annotation descriptors.
  */
 export function toPortableAnnotations(annotations) {
 	return annotations.map(({ title, colour, start, end, tags, comment }) => ({
@@ -85,11 +85,11 @@ export function toPortableAnnotations(annotations) {
 }
 
 /**
- * Same idea as toPortableAnnotations, for effects: keeps what defines the
- * effect (type, region, params, enabled state, order) and drops _id, fileId,
- * createdBy and createdAt. The output is sorted into render order, so
- * importing the array front to back recreates effects with the same relative
- * ordering, even between effects that share an `order` value.
+ * Strips database-specific identifiers from effects and sorts them into deterministic
+ * render order for portable bundle export.
+ *
+ * @param {Array<object>} effects - Effects from the database.
+ * @returns {Array<object>} Sanitized, ordered portable effect descriptors.
  */
 export function toPortableEffects(effects) {
 	return [...effects]

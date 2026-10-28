@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNotifications } from "../components/notifications/NotificationProvider";
 
-// Each run closes over its original arguments. Retrying never reads a newer selection.
+/**
+ * Wraps async export tasks with toast notification lifecycle management and retry capabilities.
+ *
+ * @param {string} fileId - ID of the active audio file.
+ * @returns {{
+ *   run: (task: { mode?: string, action: () => Promise<void>, pending: string, errorMessage: string }, retryId?: string) => Promise<void>,
+ *   mode: string|null,
+ *   isExporting: boolean
+ * }}
+ */
 export function useNotifiedExport(fileId) {
 	const { notify, update } = useNotifications();
 	const running = useRef(false);

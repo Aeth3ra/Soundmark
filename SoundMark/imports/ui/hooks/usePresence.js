@@ -6,6 +6,19 @@ import { PresenceCollection } from "../../api/presences/presenceCollection";
 
 const STALE_MS = 30000;
 
+/**
+ * Publishes and tracks real-time collaborator presence (playhead positions, playback status)
+ * for a shared audio workspace using throttled heartbeats.
+ *
+ * @param {object} params
+ * @param {string} params.fileId - Target audio workspace ID.
+ * @param {object|null} params.identity - Authenticated user identity ({ userId }).
+ * @param {number} params.position - Current local playhead time in seconds.
+ * @param {boolean} [params.isPlaying=false] - Local playing state.
+ * @param {number} [params.playbackRate=1] - Local playback rate multiplier.
+ * @param {string|null} [params.followingUserId=null] - Target followed collaborator ID.
+ * @returns {{ others: Array<object>, participants: Array<object>, isLoading: boolean }}
+ */
 export function usePresence({
 	fileId,
 	identity,
@@ -59,11 +72,10 @@ export function usePresence({
 		return { participants, others: participants.filter((doc) => doc.updatedAt > cutoff) };
 	}, [fileId, identity?.userId]);
 
-	// Network Engine: Handles both fast movement updates and slow pause heartbeats
+	// Transmit presence state: throttled during movement, periodic heartbeat while paused
 	useEffect(() => {
 		if (!identity?.userId || !fileId) return;
 
-		// Helper to dispatch update to Meteor
 		const sendPresenceUpdate = () => {
 			const now = Date.now();
 			lastSentRef.current = now;

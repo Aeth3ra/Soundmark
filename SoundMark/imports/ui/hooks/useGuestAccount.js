@@ -4,6 +4,17 @@ import { useTracker } from "meteor/react-meteor-data";
 import { loginAsGuest } from "../services/guestLogin";
 import { getUser } from "../services/userService";
 
+/**
+ * Ensures the client has an active guest account, automatically triggering anonymous
+ * authentication if no session exists or waiting for session resumption to settle.
+ *
+ * @returns {{
+ *   userId: string|null,
+ *   name: string|null,
+ *   isReady: boolean,
+ *   loginError: Error|null
+ * }}
+ */
 export function useGuestAccount() {
   const [loginError, setLoginError] = useState(null);
   const [settled, setSettled] = useState(false);

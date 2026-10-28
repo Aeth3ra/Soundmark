@@ -7,9 +7,12 @@ import { PresenceCollection } from "../presences/presenceCollection";
 const DUPLICATE_KEY_ERROR_CODE = 11000;
 
 /**
- * Creates a session doc for this file if one doesn't already exist.
- * Safe to call concurrently - a duplicate-key error just means someone
- * else's call won the race, which is fine (session already exists).
+ * Creates a collaborative session document for this file if one doesn't exist.
+ * Concurrency-safe against race conditions via Mongo duplicate key handling.
+ *
+ * @param {string} fileId - Workspace file ID.
+ * @param {string} hostId - User ID of the host initiating the session.
+ * @returns {Promise<void>}
  */
 export async function createSessionIfNeeded(fileId, hostId) {
   try {
@@ -23,17 +26,24 @@ export async function createSessionIfNeeded(fileId, hostId) {
   }
 }
 
-/** Whether the given user is the host of the given file's session. */
+/**
+ * Checks whether the given user is the designated host of a session.
+ *
+ * @param {string} fileId - Workspace file ID.
+ * @param {string} userId - User ID to test.
+ * @returns {Promise<boolean>} True if the user is host, false otherwise.
+ */
 export async function isHost(fileId, userId) {
   const session = await SessionsCollection.findOneAsync({ _id: fileId });
   return session?.hostId === userId;
 }
 
 /**
- * Ends a file's collaborative session entirely: removes the session
- * record, everyone's presence doc for that file, and the audio file
- * itself. Only ever called once we've established the departing/expired
- * user was the host.
+ * Terminates a session completely, removing the session document,
+ * all associated participant presences, and the audio file and its artifacts.
+ *
+ * @param {string} fileId - Workspace file ID to end.
+ * @returns {Promise<void>}
  */
 export async function endSession(fileId) {
   await SessionsCollection.removeAsync({ _id: fileId });

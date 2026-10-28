@@ -7,9 +7,11 @@ import {
 import { applyEffectsChain } from "../utils/audioEffects";
 
 /**
- * Function to upload audio file into cloud
- * @param {*} file file to get uploaded
- * @returns fileId which is linked to mongo entry
+ * Uploads an audio file to Cloudflare R2 storage via a presigned URL.
+ *
+ * @param {File} file - Audio file to upload.
+ * @returns {Promise<string>} Mongo ID of the created audio document.
+ * @throws {Error} If presigned URL creation or R2 upload fails.
  */
 export async function upload(file) {
 	const { uploadUrl, fileId } = await Meteor.callAsync(
@@ -34,9 +36,10 @@ export async function upload(file) {
 }
 
 /**
- * Function that gets the link for the specific audio file
- * @param {*} fileId audio file id for mongo entry
- * @returns url for the audio from mongo entry
+ * Retrieves a signed temporary download URL for playback.
+ *
+ * @param {string} fileId - ID of the audio file document.
+ * @returns {Promise<string>} Signed download URL.
  */
 export async function getPlayableUrl(fileId) {
 	const downloadUrl = await Meteor.callAsync("audio.getDownloadUrl", fileId);
@@ -44,18 +47,20 @@ export async function getPlayableUrl(fileId) {
 }
 
 /**
- * Function that deletes the audio file from mongo and cloudflare
- * @param {*} fileId audio file id for mongo entry
- * @returns nothing
+ * Deletes the audio file from R2 storage along with its database records.
+ *
+ * @param {string} fileId - ID of the audio file to delete.
+ * @returns {Promise<void>}
  */
 export async function deleteFile(fileId) {
 	await Meteor.callAsync("audio.deleteFile", fileId);
 }
 
 /**
- * Exports the original audio file without applying effects.
+ * Downloads the unmodified original audio file from cloud storage.
  *
- * @param {string} fileId
+ * @param {string} fileId - ID of the audio file to export.
+ * @returns {Promise<void>}
  */
 export async function exportAudio(fileId) {
 	const info = await Meteor.callAsync("audio.getExportInfo", fileId);
@@ -70,20 +75,30 @@ export async function exportAudio(fileId) {
 	downloadBlob(blob, info.fileName);
 }
 
+/**
+ * Decodes raw audio array buffer into an AudioBuffer using an ephemeral AudioContext.
+ *
+ * @param {ArrayBuffer} arrayBuffer - Raw audio file bytes.
+ * @returns {Promise<AudioBuffer>} Decoded Web Audio buffer.
+ */
 const decodeAudioFile = async (arrayBuffer) => {
 	const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 	const context = new AudioContextClass();
 
 	try {
-		// Decode the source file independently of the waveform preview
-		// decodeAudioData produces floating-point samples at this context's rate
 		return await context.decodeAudioData(arrayBuffer);
 	} finally {
 		await context.close();
 	}
 };
 
-/** Decode the source once for a player's preview session. */
+/**
+ * Fetches and decodes the audio file into an AudioBuffer for preview playback.
+ *
+ * @param {string} url - Source audio URL.
+ * @param {AbortSignal} [signal] - Optional abort signal for cancellation.
+ * @returns {Promise<AudioBuffer>} Decoded audio buffer.
+ */
 export async function loadAudioBuffer(url, signal) {
 	const response = await fetch(url, { signal });
 	if (!response.ok) throw new Error("Could not load the audio for playback.");
@@ -93,7 +108,13 @@ export async function loadAudioBuffer(url, signal) {
 	return buffer;
 }
 
-/** Use the same renderer as selection export, always starting from the source */
+/**
+ * Renders an effects preview WAV Blob from an unmodified source buffer.
+ *
+ * @param {AudioBuffer} sourceBuffer - Clean decoded source track.
+ * @param {Array<object>} effects - Current list of active effects.
+ * @returns {Promise<Blob>} Processed audio preview Blob in WAV format.
+ */
 export async function createPreviewBlob(sourceBuffer, effects) {
 	const processed = await applyEffectsChain(sourceBuffer, effects);
 	return encodeWavBlob(processed);

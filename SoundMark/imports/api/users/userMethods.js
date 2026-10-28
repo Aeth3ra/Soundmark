@@ -3,8 +3,11 @@ import { check } from "meteor/check";
 
 Meteor.methods({
   /**
-   * Sets the display name on the calling user's own account (anonymous or
-   * otherwise). Only ever touches this.userId
+   * Sets the display name on the authenticated user's account profile.
+   *
+   * @param {string} name - Desired display name.
+   * @returns {Promise<void>}
+   * @throws {Meteor.Error} "not-authorized" if unauthenticated, "invalid-name" if blank.
    */
   async "user.setDisplayName"(name) {
     if (!this.userId) {
@@ -22,6 +25,12 @@ Meteor.methods({
       $set: { "profile.name": trimmed }
     });
   },
+
+  /**
+   * Returns the current authenticated user's profile display name.
+   *
+   * @returns {Promise<string|null>} Profile name, or null if unauthenticated.
+   */
   async "user.get"() {
     if (!this.userId) return null;
     const user = await Meteor.users.findOneAsync(this.userId, {

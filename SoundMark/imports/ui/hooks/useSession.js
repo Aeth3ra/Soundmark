@@ -3,8 +3,12 @@ import { useSubscribe, useTracker } from "meteor/react-meteor-data";
 import { SessionsCollection } from "../../api/sessions/sessionCollection";
 
 /**
- * Tracks a file's collaborative session: who its host is, and whether the
- * session has ended (host left or went stale).
+ * Tracks a file's collaborative session: host assignment and session lifecycle termination.
+ *
+ * @param {object} params
+ * @param {string} params.fileId - Target workspace file ID.
+ * @param {string|null} params.userId - Authenticated user's ID.
+ * @returns {{ isHost: boolean, sessionEnded: boolean, isLoading: boolean }}
  */
 export function useSession({ fileId, userId }) {
   const isSubLoading = useSubscribe("sessions.forFile", fileId);

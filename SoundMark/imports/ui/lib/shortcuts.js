@@ -14,7 +14,7 @@ export const SHORTCUT_GROUPS = [
 			{
 				id: "seekForwards",
 				keys: "l",
-				description: "Seek +2.5s backwards"
+				description: "Seek +2.5s forwards"
 			}
 		]
 	},
@@ -41,5 +41,11 @@ export const SHORTCUT_GROUPS = [
 	}
 ];
 
+/**
+ * Looks up the key combo string associated with a shortcut identifier.
+ *
+ * @param {string} id - Shortcut identifier.
+ * @returns {string|undefined} Key combo string (e.g. "mod+a"), or undefined if not found.
+ */
 export const getShortcutKeys = (id) =>
 	SHORTCUT_GROUPS.flatMap((g) => g.shortcuts).find((s) => s.id === id)?.keys;

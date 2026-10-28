@@ -3,10 +3,11 @@ import { useMemo } from "react";
 const ROW_HEIGHT = 18; // px, adjust to taste
 
 /**
- * Greedy interval packing: walk effects sorted by start time, and place each
- * one in the first row whose last-placed end time is <= this effect's start.
- * This keeps overlapping effects visually separated without needing an
- * explicit "lane" field on the effect document.
+ * Packs overlapping intervals into non-colliding visual rows using greedy interval packing.
+ * Sorts effects by start time and places each into the first available row where previous end <= current start.
+ *
+ * @param {Array<object>} sortedEffects - Effects pre-sorted by start time.
+ * @returns {{ placements: Array<{ effect: object, row: number }>, rowCount: number }}
  */
 function packIntoRows(sortedEffects) {
 	const rowEndTimes = []; // rowEndTimes[i] = end time of the last effect placed in row i
@@ -27,15 +28,14 @@ function packIntoRows(sortedEffects) {
 }
 
 /**
- * @param waveformWidth - px, from wavesurferInstance.getWrapper().scrollWidth
- *   (same value UserPresenceOverlay uses - keeps every overlay in sync with
- *   however wide wavesurfer is actually rendering, at any zoom level)
- * @param effects - effect docs: { _id, start, end, type, enabled, order, params }
- * @param duration - track duration in seconds
- * @param currentTime - current playback position in seconds
+ * Calculates pixel positions, lane row allocations, and active playback status
+ * for rendering visual effect bands over the timeline.
  *
- * Returns { bandSlots, laneHeight } where each bandSlot has pixel left/width,
- * a row index, and an isActive flag for "currently playing through this effect".
+ * @param {number} waveformWidth - Current pixel width from WaveSurfer container.
+ * @param {Array<object>} effects - Effect documents to lay out.
+ * @param {number} duration - Track duration in seconds.
+ * @param {number} currentTime - Current playback position in seconds.
+ * @returns {{ bandSlots: Array<{ id: string, effect: object, left: number, width: number, top: number, isActive: boolean }>, laneHeight: number }}
  */
 export function useEffectsRender(
 	waveformWidth,

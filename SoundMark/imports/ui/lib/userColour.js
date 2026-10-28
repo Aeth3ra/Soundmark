@@ -8,6 +8,12 @@ const COLORS = [
   "#e879f9" // pink
 ];
 
+/**
+ * Hashes a string identifier to deterministically select a palette color.
+ *
+ * @param {string} id - Identifier string (e.g. user ID).
+ * @returns {string} Hex color string.
+ */
 export function colourForId(id) {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {

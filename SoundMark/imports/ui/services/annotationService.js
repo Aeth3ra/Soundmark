@@ -1,5 +1,11 @@
 import { Meteor } from "meteor/meteor";
 
+/**
+ * Deletes an annotation document via Meteor RPC.
+ *
+ * @param {{ _id: string }} annotation - Annotation to delete.
+ * @returns {Promise<void>}
+ */
 export async function deleteAnnotation(annotation) {
 	try {
 		await Meteor.callAsync("annotations.delete", annotation._id);
@@ -9,6 +15,19 @@ export async function deleteAnnotation(annotation) {
 	}
 }
 
+/**
+ * Creates a new annotation document for an audio file.
+ *
+ * @param {object} params
+ * @param {string} params.fileId - Target audio file ID.
+ * @param {string} params.title - Title or headline of the annotation.
+ * @param {string} params.colour - Hex color code.
+ * @param {number} params.start - Start time in seconds.
+ * @param {number|null} [params.end] - End time in seconds, or null for point markers.
+ * @param {string[]} [params.tags] - Category tags.
+ * @param {string} [params.comment] - Annotation notes or commentary.
+ * @returns {Promise<void>}
+ */
 export async function createAnnotation({
 	fileId,
 	title,
@@ -34,6 +53,19 @@ export async function createAnnotation({
 	}
 }
 
+/**
+ * Updates an existing annotation document.
+ *
+ * @param {string} annotationId - ID of the annotation to update.
+ * @param {object} updates
+ * @param {string} updates.title - New title.
+ * @param {string} updates.colour - New hex color code.
+ * @param {string[]} updates.tags - Updated tags array.
+ * @param {string} updates.comment - Updated comment text.
+ * @param {number} updates.start - Updated start time in seconds.
+ * @param {number|null} updates.end - Updated end time in seconds, or null for timestamps.
+ * @returns {Promise<void>}
+ */
 export async function updateAnnotation(
 	annotationId,
 	{ title, colour, tags, comment, start, end }

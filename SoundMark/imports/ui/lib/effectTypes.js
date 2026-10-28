@@ -133,9 +133,12 @@ function parseFieldValue(field, raw) {
 }
 
 /**
- * Validates and coerces the form's raw (string) field values into the
- * params object the backend expects, using each field's own range/kind.
- * Throws a user-facing Error on the first invalid field.
+ * Validates and coerces form input strings into the structured parameter object expected by the backend.
+ *
+ * @param {string} type - Effect type key.
+ * @param {Record<string, string>} rawValues - Map of raw form values.
+ * @returns {Record<string, any>} Validated and type-coerced parameter map.
+ * @throws {Error} User-facing validation error if a field value is out of range.
  */
 export function validateEffectParams(type, rawValues) {
 	const config = EFFECT_TYPES[type];
@@ -157,10 +160,11 @@ export function validateEffectParams(type, rawValues) {
 }
 
 /**
- * Non-throwing check for params that are already stored (e.g. loaded from the
- * backend). Uses the same field rules as the form, but is stricter about
- * types: numeric fields must already be numbers, not numeric strings. Effects
- * saved under an older schema (missing or out-of-range fields) fail this check.
+ * Validates already-stored parameter values against field constraints without throwing.
+ *
+ * @param {string} type - Effect type key.
+ * @param {object} params - Stored parameters map.
+ * @returns {boolean} True if all parameters conform to current validation rules.
  */
 export function isEffectParamsValid(type, params) {
 	const config = EFFECT_TYPES[type];
@@ -178,10 +182,11 @@ export function isEffectParamsValid(type, params) {
 }
 
 /**
- * Display info for a stored effect: `{ title, details, needsRecreation }`.
- * `needsRecreation` is true when the type is known but its stored params no
- * longer satisfy the current field rules. Unknown types are shown as-is and
- * are not flagged, so they can still be toggled or deleted.
+ * Generates card display metadata for a stored effect, flagging if parameters require migration.
+ *
+ * @param {string} type - Effect type key.
+ * @param {object} params - Stored parameters map.
+ * @returns {{ title: string, details: string, needsRecreation: boolean }}
  */
 export function describeEffect(type, params) {
 	const config = EFFECT_TYPES[type];
@@ -210,7 +215,12 @@ export function describeEffect(type, params) {
 	};
 }
 
-/** Converts a type's numeric/select defaults into controlled-input strings. */
+/**
+ * Converts a type's default parameters into string values for controlled form inputs.
+ *
+ * @param {string} type - Effect type key.
+ * @returns {Record<string, string>} Form field defaults as strings.
+ */
 export function defaultFieldValues(type) {
 	const { defaultParams } = EFFECT_TYPES[type];
 	return Object.fromEntries(
@@ -233,8 +243,11 @@ const PARAM_LABELS = {
 };
 
 /**
- * Returns a nicely formatted string for a given effect parameter value.
- * e.g., adding "dB", "Hz", or "+/-" signs.
+ * Formats a parameter value with units (e.g. dB, Hz, semitones).
+ *
+ * @param {string} key - Parameter field name.
+ * @param {any} value - Parameter value.
+ * @returns {string} Formatted label string.
  */
 export const formatParamValue = (key, value) => {
 	if (value == null) return "N/A";
@@ -247,7 +260,6 @@ export const formatParamValue = (key, value) => {
 		case "semitones":
 			return `${value > 0 ? "+" : ""}${value} semitones`;
 		case "filterType":
-			// Capitalize the first letter and format common types
 			if (value === "lowpass") return "Low-pass";
 			if (value === "highpass") return "High-pass";
 			return String(value);
@@ -259,7 +271,10 @@ export const formatParamValue = (key, value) => {
 };
 
 /**
- * Formats the parameter key into a readable label.
+ * Maps a parameter field name to its display label.
+ *
+ * @param {string} key - Parameter field name.
+ * @returns {string} Human-readable label.
  */
 export const formatParamLabel = (key) => {
 	return PARAM_LABELS[key] || key;
