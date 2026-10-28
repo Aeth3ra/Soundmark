@@ -145,23 +145,23 @@ async function renderFilter(audioBuffer, filterType, frequency) {
 }
 
 /**
- * Applies an ordered chain of active effects across regions of an audio track.
- * The source AudioBuffer is never mutated.
+ * Applies saved effects, in order, each to its own time region only.
+ * The source buffer is cloned first, so the original audio is never mutated.
  *
- * @param {AudioBuffer} audioBuffer - Base audio track to process.
- * @param {Array<object>} [effects=[]] - List of effect documents to apply.
+ * @param {AudioBuffer} audioBuffer - Decoded original audio
+ * @param {Array<{type, start, end, params, enabled, order}>} [effects=[]] - List of effects to apply.
  * @returns {Promise<AudioBuffer>} Cloned and processed AudioBuffer.
  */
 export async function applyEffectsChain(audioBuffer, effects = []) {
 	validateEffectsList(effects);
 
-	const activeEffects = getOrderedActiveEffects(effects);
+	const activeEffects = getOrderedActiveEffects(effects); // enabled, by order
 	if (activeEffects.length === 0) return audioBuffer;
 
-	const output = cloneAudioBuffer(audioBuffer);
+	const output = cloneAudioBuffer(audioBuffer); // clone to never touch the source
 
 	for (const effect of activeEffects) {
-		const handler = EFFECT_HANDLERS[effect.type];
+		const handler = EFFECT_HANDLERS[effect.type]; // registry lookup
 		if (!handler) {
 			throw new Error(
 				`Rendering ${effect.type} effects is not implemented yet.`
@@ -171,15 +171,15 @@ export async function applyEffectsChain(audioBuffer, effects = []) {
 		const { start, end, params } = effect;
 
 		validateRegionBounds(start, end, output.duration);
-		handler.validateParams(params);
+		handler.validateParams(params); // per-effect settings check
 
-		const region = sliceAudioBuffer(output, start, end);
-		const metrics = measureAudioBuffer(region);
+		const region = sliceAudioBuffer(output, start, end); // selected region
+		const metrics = measureAudioBuffer(region); // Meyda peak and RMS
 
-		if (metrics.rms === 0) continue;
+		if (metrics.rms === 0) continue; // silent region: nothing to process
 
 		const renderedRegion = await handler.render(region, params, metrics);
-		spliceAudioBuffer(output, renderedRegion, start);
+		spliceAudioBuffer(output, renderedRegion, start); // write back in place
 	}
 
 	return output;

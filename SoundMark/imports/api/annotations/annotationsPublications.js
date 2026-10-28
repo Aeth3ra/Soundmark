@@ -3,14 +3,13 @@ import { check } from "meteor/check";
 import { AnnotationsCollection } from "./annotationsCollection";
 import { publishComposite } from "meteor/reywood:publish-composite";
 
+// Reactive read, push annotations to subscribed clients
 Meteor.publish("annotations.forFile", function (fileId) {
-  check(fileId, String);
-
-  if (!this.userId) {
-    return this.ready();
-  }
-
-  return AnnotationsCollection.find({ fileId });
+	check(fileId, String);
+	if (!this.userId) {
+		return this.ready();
+	} // not longged in, don't send
+	return AnnotationsCollection.find({ fileId }); // all annotations on this file
 });
 
 /**
@@ -24,24 +23,24 @@ Meteor.publish("annotations.forFile", function (fileId) {
  * this file remain.
  */
 publishComposite("annotations.authorsForFile", function (fileId) {
-  check(fileId, String);
+	check(fileId, String);
 
-  return {
-    find() {
-      return AnnotationsCollection.find(
-        { fileId },
-        { fields: { createdBy: 1 } }
-      );
-    },
-    children: [
-      {
-        find(annotation) {
-          return Meteor.users.find(
-            { _id: annotation.createdBy },
-            { fields: { "profile.name": 1 } }
-          );
-        }
-      }
-    ]
-  };
+	return {
+		find() {
+			return AnnotationsCollection.find(
+				{ fileId },
+				{ fields: { createdBy: 1 } }
+			);
+		},
+		children: [
+			{
+				find(annotation) {
+					return Meteor.users.find(
+						{ _id: annotation.createdBy },
+						{ fields: { "profile.name": 1 } }
+					);
+				}
+			}
+		]
+	};
 });

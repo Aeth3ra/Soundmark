@@ -72,20 +72,22 @@ Meteor.methods({
 		comment = ""
 	}) {
 		if (!this.userId) {
+			// authentication guard
 			throw new Meteor.Error("not-authorized", "Must be logged in.");
 		}
 
-		check(fileId, String);
+		check(fileId, String); // type checks
 		check(title, String);
 		check(colour, String);
 		check(start, Number);
-		check(end, Match.OneOf(Number, null));
+		check(end, Match.OneOf(Number, null)); // null means a timestamp marker
 		check(tags, [String]);
 		check(comment, String);
 
 		const audioFile = await AudioCollection.findOneAsync(fileId);
 
 		if (!audioFile) {
+			// file must exist
 			throw new Meteor.Error(
 				"audio-not-found",
 				"The audio file does not exist."

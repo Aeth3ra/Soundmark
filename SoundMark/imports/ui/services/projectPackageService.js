@@ -56,44 +56,34 @@ export async function exportProjectPackage({ fileId, annotations, effects }) {
 }
 
 /**
- * Imports a .zip project package: uploads its audio as a new file, then
- * recreates each annotation and effect against that new fileId with its
- * original timestamps, params and metadata intact. Timestamps don't need
- * any adjustment on import since they're stored as offsets (seconds) into
- * the audio, not absolute references to the old file.
- *
- * Effects are created one at a time in the package's order (already sorted
- * into render order on export), so effects that share an `order` value keep
- * their relative sequence.
- *
- * If any annotation or effect fails to create partway through, the
- * newly-uploaded audio (and anything already created against it) is rolled
- * back rather than leaving a half-restored project behind.
- *
- * Throws ProjectPackageError (from parseProjectPackage) if the package is
- * corrupted or incompatible - that error's .message is safe to show
- * directly to the user.
- *
- * @param {File} file
- * @returns {Promise<string>} the new fileId, ready to navigate to
+ * Imports a .sndmk package: uploads its audio as a new file, then recreates
+ * every annotation and effect against the new fileId. Timestamps need no
+ * adjustment (they are offsets into the audio). On failure the new audio is
+ * rolled back, so no half-restored project remains.
+ * @param {File} file - package chosen by the user
+ * @returns {Promise<string>} the new fileId
+ * @throws {ProjectPackageError} for a corrupted or incompatible package
  */
 export async function importProjectPackage(file) {
+	// Validates every layer of the package before anything is uploaded
 	const { fileName, contentType, annotations, effects, audioBlob } =
 		await parseProjectPackage(file);
 
 	const audioFile = new File([audioBlob], fileName, { type: contentType });
-	const fileId = await upload(audioFile);
+	const fileId = await upload(audioFile); // the audio becomes a new file with its own id
 
 	try {
 		for (const annotation of annotations) {
+			// restore annotations
 			await createAnnotation({ fileId, ...annotation });
 		}
 
 		for (const effect of effects) {
+			// restore effects, in saved order
 			await createEffect({ fileId, ...effect });
 		}
 	} catch (err) {
-		await deleteFile(fileId).catch(() => {});
+		await deleteFile(fileId).catch(() => {}); // roll back the uploaded audio
 		throw err;
 	}
 
