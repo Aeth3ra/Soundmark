@@ -102,3 +102,5 @@ Uploading a file creates a session. The first person to join becomes the **host*
 | Oliver Tan     | otan0006                | DatKid321     |
 | Ritvik Sharma  | rsha0068                | Aeth3ra       |
 | Danny Wu       | [email]                 | DanDom2019    |
+
+This README was developed with assistance from Google Gemini.
