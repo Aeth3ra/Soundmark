@@ -53,7 +53,7 @@ Times are in **seconds** from the start of the audio.
 | `audio.getUploadUrl` | `filename: string`, `contentType: string` | `{ uploadUrl, fileId }` | Creates the `audioFiles` record and a presigned PUT URL valid for 300 s |
 | `audio.getDownloadUrl` | `fileId` | `string` (URL) | Presigned GET URL, 300 s. Throws `file-not-found` |
 | `audio.getExportInfo` | `fileId` | `{ url, fileName }` | Presigned GET URL for exporting. Throws `not-found` |
-| `audio.deleteFile` | `fileId` | n/a | Deletes the R2 object and Mongo record. No-op if already gone |
+| `audio.deleteFile` | `fileId` | n/a | Calls `deleteAudioFile`: deletes the R2 object, the Mongo record, and the file's annotations and effects. No-op if already gone |
 
 ### Annotations (`annotations/annotationsMethods.js`)
 
@@ -130,6 +130,6 @@ The server also runs a 15 s sweep that removes presence older than 5 minutes wit
 | -------- | ---- | ------- |
 | `createSessionIfNeeded(fileId, hostId)` | `sessions/sessionMethods.js` | Insert session; ignores duplicate-key races |
 | `isHost(fileId, userId)` | `sessions/sessionMethods.js` | Host check used by effects permissions |
-| `endSession(fileId)` | `sessions/sessionMethods.js` | Removes session, presence, and audio |
-| `deleteAudioFile(fileId)` | `audio/audioMethods.js` | Deletes R2 object and Mongo record |
+| `endSession(fileId)` | `sessions/sessionMethods.js` | Removes session, presence, and the audio file with its annotations and effects |
+| `deleteAudioFile(fileId)` | `audio/audioMethods.js` | Deletes the R2 object, Mongo record, annotations, and effects |
 | `cleanupStalePresence()` | `presences/presenceMethods.js` | The sweep body (exported for tests) |
